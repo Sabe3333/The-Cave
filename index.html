@@ -37,8 +37,8 @@ body::after{content:'';position:fixed;inset:0;
 /* PASSWORD GATE */
 #gate{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;
   background-image:linear-gradient(rgba(0,210,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,210,255,0.025) 1px,transparent 1px);
-  background-size:40px 40px;}
-#gate::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 50%,transparent 30%,rgba(2,5,8,0.92) 100%);pointer-events:none;}
+  background-size:40px 40px;overflow:hidden;}
+#gate::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 50% 50%,transparent 30%,rgba(2,5,8,0.92) 100%);pointer-events:none;z-index:0;}
 .gate-logo{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;letter-spacing:10px;color:var(--accent);text-shadow:0 0 40px rgba(0,210,255,0.5);position:relative;z-index:1;}
 .gate-logo span{color:var(--accent2);}
 .gate-sub{font-size:9px;letter-spacing:5px;color:var(--text2);text-transform:uppercase;margin-bottom:10px;position:relative;z-index:1;}
@@ -338,8 +338,8 @@ select.input{cursor:pointer;}
 .reset-zoom-btn:hover{border-color:var(--accent);color:var(--accent);}
 
 /* COMPARE PANEL */
-.compare-panel{background:var(--panel);border:1px solid var(--border2);padding:16px;margin-bottom:10px;backdrop-filter:blur(8px);clip-path:polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px);transition:border-color 0.25s,box-shadow 0.25s;}
-.compare-panel:hover{box-shadow:0 0 18px rgba(0,210,255,0.05);}
+.compare-panel{background:var(--panel);border:1px solid var(--border2);padding:16px;margin-bottom:10px;backdrop-filter:blur(8px);clip-path:polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px);transition:border-color 0.25s,filter 0.25s;}
+.compare-panel:hover{border-color:var(--border2);filter:drop-shadow(0 0 10px rgba(0,210,255,0.06));}
 .compare-title{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--accent2);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .compare-title::before{content:'';width:10px;height:1px;background:var(--accent2);box-shadow:0 0 4px var(--accent2);}
 .habit-select-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
@@ -350,8 +350,8 @@ select.input{cursor:pointer;}
 
 /* YEAR HEATMAP */
 .heatmap-section{margin-bottom:10px;}
-.heatmap-habit-block{background:var(--panel);border:1px solid var(--border);padding:14px;margin-bottom:8px;backdrop-filter:blur(8px);clip-path:polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px);transition:border-color 0.25s,box-shadow 0.25s;}
-.heatmap-habit-block:hover{border-color:var(--border2);box-shadow:0 0 14px rgba(0,210,255,0.05);}
+.heatmap-habit-block{background:var(--panel);border:1px solid var(--border);padding:14px;margin-bottom:8px;backdrop-filter:blur(8px);clip-path:polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px);transition:border-color 0.25s,filter 0.25s;}
+.heatmap-habit-block:hover{border-color:var(--border2);filter:drop-shadow(0 0 8px rgba(0,210,255,0.06));}
 .heatmap-habit-name{font-size:10px;letter-spacing:2px;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .heatmap-grid{display:flex;gap:2px;overflow-x:auto;padding-bottom:4px;}
 .heatmap-grid::-webkit-scrollbar{height:2px;}
@@ -513,7 +513,7 @@ select.input{cursor:pointer;}
       <div class="chart-title">
         <span class="chart-title-text">Discipline Score Over Time</span>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button class="reset-zoom-btn" onclick="resetZoom('score')">Reset</button>
+          <button class="reset-zoom-btn" onclick="resetZoom('chartScore')">Reset</button>
           <div class="chart-nav">
             <button class="chart-nav-btn" onclick="shiftScoreChart(-1)">‹</button>
             <span class="chart-nav-label" id="scoreNavLabel"></span>
@@ -551,7 +551,7 @@ select.input{cursor:pointer;}
       <div class="chart-title">
         <span class="chart-title-text">Habit Completion</span>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button class="reset-zoom-btn" onclick="resetZoom('habit')">Reset</button>
+          <button class="reset-zoom-btn" onclick="resetZoom('chartHabit')">Reset</button>
           <div class="chart-nav">
             <button class="chart-nav-btn" onclick="shiftChart('habit',-1)">‹</button>
             <span class="chart-nav-label" id="habitNavLabel"></span>
@@ -584,7 +584,7 @@ select.input{cursor:pointer;}
       <div class="chart-title">
         <span class="chart-title-text">Motivation Trend</span>
         <div style="display:flex;gap:6px;align-items:center;">
-          <button class="reset-zoom-btn" onclick="resetZoom('mot')">Reset</button>
+          <button class="reset-zoom-btn" onclick="resetZoom('chartMot')">Reset</button>
           <div class="chart-nav">
             <button class="chart-nav-btn" onclick="shiftChart('mot',-1)">‹</button>
             <span class="chart-nav-label" id="motNavLabel"></span>
@@ -1364,25 +1364,41 @@ function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderCol
 const zoomPlugin={zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'},pan:{enabled:true,mode:'x'}};
 
 function renderScoreChart(){
-  destroyChart('score');
+  destroyChart('chartScore');
   const buckets=buildBuckets(activePeriod,chartOffsets.score);
   const data=buckets.map(b=>b.days.length?calcScore(b.days[0],b.days[b.days.length-1]).overall:0);
   document.getElementById('scoreNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.score);
   const ctx=document.getElementById('chartScore').getContext('2d');
   const grad=ctx.createLinearGradient(0,0,0,260);
-  grad.addColorStop(0,'rgba(0,255,157,0.18)');grad.addColorStop(0.6,'rgba(255,184,0,0.06)');grad.addColorStop(1,'rgba(0,255,157,0)');
-  charts['score']=new Chart(ctx,{type:'line',
-    data:{labels:buckets.map(b=>b.label),datasets:[
+  grad.addColorStop(0,'rgba(0,255,157,0.18)');grad.addColorStop(0.6,'rgba(255,184,0,0.05)');grad.addColorStop(1,'rgba(0,255,157,0)');
+  const labels=buckets.map(b=>b.label);
+  charts['chartScore']=new Chart(ctx,{type:'line',
+    data:{labels,datasets:[
+      // Main score line
       {data,borderColor:'#00ff9d',backgroundColor:grad,
        pointBackgroundColor:data.map(v=>v>=70?'#00ff9d':v>=40?'#ffb800':'#ff3d5a'),
-       pointRadius:3,pointHoverRadius:5,tension:0.3,fill:true,spanGaps:true}
+       pointRadius:3,pointHoverRadius:5,tension:0.3,fill:true,spanGaps:true,
+       label:'Score',order:1},
+      // Reference line at 70
+      {data:Array(labels.length).fill(70),borderColor:'rgba(0,255,157,0.18)',
+       borderWidth:1,borderDash:[5,5],pointRadius:0,fill:false,
+       label:'',order:2},
+      // Reference line at 40
+      {data:Array(labels.length).fill(40),borderColor:'rgba(255,184,0,0.18)',
+       borderWidth:1,borderDash:[5,5],pointRadius:0,fill:false,
+       label:'',order:3}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`Score: ${c.raw}`}},zoom:zoomPlugin},
-      scales:{...baseScales(100,false),
-        y:{...baseScales(100,false).y,
-          ticks:{...baseScales(100,false).y.ticks,
-            callback:v=>{if(v===70)return'▸ Good';if(v===40)return'▸ OK';return v;}
+      plugins:{legend:{display:false},
+        tooltip:{...tooltipDefaults(),callbacks:{
+          label:c=>c.datasetIndex===0?`Score: ${c.raw}`:null,
+          title:items=>items[0]?.datasetIndex===0?items[0].label:null
+        }},
+        zoom:zoomPlugin},
+      scales:{x:baseScales(100,false).x,
+        y:{...baseScales(100,false).y,min:0,max:100,
+          ticks:{color:TC,font:CF,
+            callback:v=>{if(v===70)return'70 ▸';if(v===40)return'40 ▸';return v;}
           }
         }
       }
@@ -1391,12 +1407,10 @@ function renderScoreChart(){
 }
 
 function renderConsistencyChart(fromDate,toDate){
-  destroyChart('consistency');
+  destroyChart('chartConsistency');
   const cbH=habits.filter(h=>h.type==='checkbox');
   if(!cbH.length){document.getElementById('chartConsistency').style.display='none';return;}
   document.getElementById('chartConsistency').style.display='block';
-  const days=getDaysInRange(fromDate,toDate);
-  // Build weekly buckets for this period
   const weeks=[];let cur=fromDate;
   while(cur<=toDate){
     const wEnd=addDays(cur,6)<=toDate?addDays(cur,6):toDate;
@@ -1404,93 +1418,123 @@ function renderConsistencyChart(fromDate,toDate){
     cur=addDays(cur,7);
   }
   const means=weeks.map(w=>w.days.length?Math.round(w.days.reduce((s,d)=>s+cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length,0)/w.days.length*100):0);
-  const sds=weeks.map((w,i)=>{
-    if(!w.days.length)return 0;
+  const sds=weeks.map(w=>{
+    if(w.days.length<2)return 0;
     const dayRates=w.days.map(d=>cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length*100);
     return Math.round(stdDev(dayRates));
   });
   const ctx=document.getElementById('chartConsistency').getContext('2d');
-  charts['consistency']=new Chart(ctx,{type:'bar',
+  charts['chartConsistency']=new Chart(ctx,{type:'bar',
     data:{labels:weeks.map(w=>w.label),datasets:[
       {label:'Avg %',data:means,backgroundColor:'rgba(0,210,255,0.3)',borderColor:'#00d2ff',borderWidth:1,borderRadius:1},
-      {label:'Variance',data:sds,backgroundColor:'rgba(255,61,90,0.2)',borderColor:'rgba(255,61,90,0.5)',borderWidth:1,borderRadius:1}
+      {label:'Spread',data:sds,backgroundColor:'rgba(255,61,90,0.2)',borderColor:'rgba(255,61,90,0.5)',borderWidth:1,borderRadius:1}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:8,padding:10}},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.dataset.label}: ${c.raw}${c.datasetIndex===0?'%':' pts spread'}`}}},
+      plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:8,padding:10}},
+        tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.dataset.label}: ${c.raw}${c.datasetIndex===0?'%':' pts'}`}}},
       scales:baseScales(100,false)}});
 }
 
 function renderDayOfWeekChart(fromDate,toDate){
-  destroyChart('dow');
+  destroyChart('chartDayOfWeek');
   const data=calcDayOfWeek(fromDate,toDate);
-  if(!data){return;}
+  if(!data)return;
   const ctx=document.getElementById('chartDayOfWeek').getContext('2d');
   const rates=data.map(d=>d.rate??0);
   const best=Math.max(...rates);
-  charts['dow']=new Chart(ctx,{type:'bar',
+  const worst=Math.min(...rates.filter(r=>r>0));
+  charts['chartDayOfWeek']=new Chart(ctx,{type:'bar',
     data:{labels:data.map(d=>d.label),datasets:[{
       data:rates,
-      backgroundColor:rates.map(r=>r===best?'rgba(0,255,157,0.6)':r>=70?'rgba(0,210,255,0.35)':r>=40?'rgba(255,184,0,0.3)':'rgba(255,61,90,0.2)'),
-      borderColor:rates.map(r=>r===best?'#00ff9d':r>=70?'#00d2ff':r>=40?'#ffb800':'#ff3d5a'),
+      backgroundColor:rates.map(r=>r===best?'rgba(0,255,157,0.65)':r===worst&&r>0?'rgba(255,61,90,0.4)':r>=70?'rgba(0,210,255,0.35)':r>=40?'rgba(255,184,0,0.3)':'rgba(255,61,90,0.15)'),
+      borderColor:rates.map(r=>r===best?'#00ff9d':r===worst&&r>0?'#ff3d5a':r>=70?'#00d2ff':r>=40?'#ffb800':'#ff3d5a'),
       borderWidth:1,borderRadius:2
     }]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`Completion: ${c.raw}%`}}},
+      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{
+        label:c=>{const isBest=c.raw===best,isWorst=c.raw===worst&&c.raw>0;return`${c.raw}%${isBest?' ← best day':isWorst?' ← weakest':''}`;}}
+      }},
       scales:{...baseScales(100,true),x:{...baseScales(100,true).x,ticks:{...baseScales(100,true).x.ticks,maxRotation:0}}}}});
 }
 
 function renderMotPerfChart(fromDate,toDate){
-  destroyChart('motperf');
+  destroyChart('chartMotPerf');
   const points=calcMotPerf(fromDate,toDate);
-  const ctx=document.getElementById('chartMotPerf').getContext('2d');
+  const canvas=document.getElementById('chartMotPerf');
+  const ctx=canvas.getContext('2d');
   if(points.length<3){
-    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-    ctx.fillStyle='rgba(0,210,255,0.18)';ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';
-    ctx.fillText('// Need 3+ journal entries with motivation',ctx.canvas.width/2,ctx.canvas.height/2);
+    // Draw placeholder text after a brief delay so canvas has dimensions
+    setTimeout(()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(0,210,255,0.2)';
+      ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('// Need 3+ journal entries',canvas.width/2,canvas.height/2-8);
+      ctx.fillText('to show correlation',canvas.width/2,canvas.height/2+8);
+    },50);
     return;
   }
-  // Compute linear regression
+  // Linear regression
   const n=points.length;
   const sumX=points.reduce((s,p)=>s+p.x,0);
   const sumY=points.reduce((s,p)=>s+p.y,0);
   const sumXY=points.reduce((s,p)=>s+p.x*p.y,0);
   const sumX2=points.reduce((s,p)=>s+p.x*p.x,0);
-  const slope=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX)||0;
+  const denom=n*sumX2-sumX*sumX;
+  const slope=denom?((n*sumXY-sumX*sumY)/denom):0;
   const intercept=(sumY-slope*sumX)/n;
-  const corrCoef=(() => {
-    const mx=sumX/n,my=sumY/n;
-    const num=points.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0);
-    const den=Math.sqrt(points.reduce((s,p)=>s+(p.x-mx)**2,0)*points.reduce((s,p)=>s+(p.y-my)**2,0));
-    return den?parseFloat((num/den).toFixed(2)):0;
-  })();
+  // Pearson r
+  const mx=sumX/n,my=sumY/n;
+  const num=points.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0);
+  const den=Math.sqrt(points.reduce((s,p)=>s+(p.x-mx)**2,0)*points.reduce((s,p)=>s+(p.y-my)**2,0));
+  const r=den?parseFloat((num/den).toFixed(2)):0;
+  const rLabel=Math.abs(r)>=0.6?'strong':Math.abs(r)>=0.3?'moderate':'weak';
+  const rColor=Math.abs(r)>=0.6?'#00ff9d':Math.abs(r)>=0.3?'#ffb800':'#ff3d5a';
 
-  const trendData=[{x:1,y:Math.round(intercept+slope)},{x:10,y:Math.round(intercept+slope*10)}];
-  charts['motperf']=new Chart(ctx,{type:'scatter',
+  // Trend line from x=1 to x=10
+  const trendPts=[1,2,3,4,5,6,7,8,9,10].map(x=>({x,y:Math.min(100,Math.max(0,Math.round(intercept+slope*x)))}));
+
+  charts['chartMotPerf']=new Chart(ctx,{type:'scatter',
     data:{datasets:[
-      {label:'Days',data:points.map(p=>({x:p.x,y:p.y})),
-       backgroundColor:points.map(p=>p.y>=70?'rgba(0,255,157,0.7)':p.y>=40?'rgba(255,184,0,0.7)':'rgba(255,61,90,0.7)'),
-       pointRadius:5,pointHoverRadius:7},
-      {label:`Trend (r=${corrCoef})`,data:trendData,type:'line',
-       borderColor:'rgba(123,97,255,0.6)',borderWidth:1,borderDash:[4,3],
-       pointRadius:0,fill:false,showLine:true}
+      {label:'Journal days',
+       data:points.map(p=>({x:p.x,y:p.y})),
+       backgroundColor:points.map(p=>p.y>=70?'rgba(0,255,157,0.75)':p.y>=40?'rgba(255,184,0,0.75)':'rgba(255,61,90,0.75)'),
+       pointRadius:6,pointHoverRadius:8,pointBorderWidth:0},
+      {label:`r = ${r} (${rLabel} link)`,
+       data:trendPts,
+       type:'scatter',
+       showLine:true,
+       borderColor:rColor,
+       borderWidth:2,
+       borderDash:[5,4],
+       pointRadius:0,
+       fill:false,
+       backgroundColor:'transparent'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:8,padding:10}},
-        tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.datasetIndex===0?`Mot: ${c.parsed.x}/10 → Perf: ${c.parsed.y}%`:null}}},
+      plugins:{
+        legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12,
+          filter:item=>item.datasetIndex===1}},
+        tooltip:{...tooltipDefaults(),callbacks:{
+          label:c=>c.datasetIndex===0?`Mot ${c.parsed.x}/10 → ${c.parsed.y}% habits`:null,
+          title:items=>items[0]?.datasetIndex===0?formatDate(points[items[0].dataIndex]?.date||''):''
+        }}
+      },
       scales:{
-        x:{min:1,max:10,ticks:{color:TC,font:CF,stepSize:1},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:'Motivation',color:TC,font:CF}},
-        y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:'Habits done',color:TC,font:CF}}
+        x:{min:1,max:10,ticks:{color:TC,font:CF,stepSize:1},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
+           title:{display:true,text:'// Motivation',color:TC,font:CF}},
+        y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
+           title:{display:true,text:'// Habit %',color:TC,font:CF}}
       }}});
 }
 
 function renderHabitChart(){
-  destroyChart('habit');
+  destroyChart('chartHabit');
   const cbH=habits.filter(h=>h.type==='checkbox');
   const buckets=buildBuckets(activePeriod,chartOffsets.habit);
   const data=buckets.map(b=>!cbH.length||!b.days.length?0:Math.round(b.days.reduce((s,d)=>s+cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length,0)/b.days.length*100));
   document.getElementById('habitNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.habit);
   const ctx=document.getElementById('chartHabit').getContext('2d');
-  charts['habit']=new Chart(ctx,{type:'bar',
+  charts['chartHabit']=new Chart(ctx,{type:'bar',
     data:{labels:buckets.map(b=>b.label),datasets:[{data,
       backgroundColor:data.map(v=>v>=70?'rgba(0,255,157,0.4)':v>=40?'rgba(0,210,255,0.3)':'rgba(255,61,90,0.2)'),
       borderColor:data.map(v=>v>=70?'#00ff9d':v>=40?'#00d2ff':'#ff3d5a'),
@@ -1501,7 +1545,7 @@ function renderHabitChart(){
 }
 
 function renderMotChart(){
-  destroyChart('mot');
+  destroyChart('chartMot');
   const buckets=buildBuckets(activePeriod,chartOffsets.mot);
   const data=buckets.map(b=>{
     const e=journal.filter(j=>b.days.includes(j.date)&&j.motivation);
@@ -1512,7 +1556,7 @@ function renderMotChart(){
   const grad=ctx.createLinearGradient(0,0,0,220);
   grad.addColorStop(0,'rgba(255,184,0,0.16)');grad.addColorStop(1,'rgba(255,184,0,0)');
   const pointColors=data.map(v=>v===null?'transparent':v>=8?'#00ff9d':v>=5?'#ffb800':'#ff3d5a');
-  charts['mot']=new Chart(ctx,{type:'line',
+  charts['chartMot']=new Chart(ctx,{type:'line',
     data:{labels:buckets.map(b=>b.label),datasets:[{
       data,borderColor:'#ffb800',backgroundColor:grad,
       pointBackgroundColor:pointColors,pointBorderColor:pointColors,
@@ -1525,9 +1569,9 @@ function renderMotChart(){
 }
 
 function renderGoalChart(){
-  destroyChart('goal');if(!goals.length)return;
+  destroyChart('chartGoal');if(!goals.length)return;
   const ctx=document.getElementById('chartGoal').getContext('2d');
-  charts['goal']=new Chart(ctx,{type:'bar',
+  charts['chartGoal']=new Chart(ctx,{type:'bar',
     data:{labels:goals.map(g=>g.name.length>18?g.name.slice(0,18)+'…':g.name),
       datasets:[{data:goals.map(g=>g.progress),
         backgroundColor:goals.map(g=>g.progress>=100?'rgba(0,255,157,0.45)':g.progress>=70?'rgba(0,210,255,0.3)':'rgba(255,184,0,0.28)'),
@@ -1559,7 +1603,7 @@ function toggleCompare(id){
   renderCompareChips();renderCompareChart();
 }
 function renderCompareChart(){
-  destroyChart('compare');
+  destroyChart('chartCompare');
   const canvas=document.getElementById('chartCompare');
   const ctx=canvas.getContext('2d');
   if(!compareSelected.length){
@@ -1600,7 +1644,7 @@ function renderCompareChart(){
     return{label:h.name+(h.unit?` (${h.unit})`:''),data,borderColor:color,backgroundColor:`rgba(${hexToRgb(color)},0.06)`,
       pointBackgroundColor:color,pointRadius:3,pointHoverRadius:5,tension:0.3,fill:false,spanGaps:true,yAxisID:axisId};
   }).filter(Boolean);
-  charts['compare']=new Chart(ctx,{type:'line',data:{labels:buckets.map(b=>b.label),datasets},
+  charts['chartCompare']=new Chart(ctx,{type:'line',data:{labels:buckets.map(b=>b.label),datasets},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:14}},tooltip:tooltipDefaults(),zoom:zoomPlugin},scales}});
 }
