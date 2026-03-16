@@ -220,10 +220,10 @@ select.input{cursor:pointer;}
 
 /* TYPE PICKER */
 .type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
-.type-opt{padding:10px 6px;text-align:center;background:rgba(0,0,0,0.3);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;clip-path:polygon(5px 0%,100% 0%,100% calc(100% - 5px),calc(100% - 5px) 100%,0% 100%,0% 5px);}
+.type-opt{padding:8px 6px;text-align:center;background:rgba(0,0,0,0.3);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;clip-path:polygon(5px 0%,100% 0%,100% calc(100% - 5px),calc(100% - 5px) 100%,0% 100%,0% 5px);}
 .type-opt:hover{border-color:var(--border2);}
 .type-opt.selected{border-color:var(--accent);background:rgba(0,210,255,0.08);}
-.type-icon{font-size:16px;margin-bottom:4px;}
+.type-icon{font-size:14px;margin-bottom:3px;}
 .type-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);}
 .type-opt.selected .type-label{color:var(--accent);}
 
@@ -674,17 +674,43 @@ select.input{cursor:pointer;}
       <input class="input" id="customCatInput" placeholder="// custom category name" style="display:none;margin-top:6px;margin-bottom:0;">
     </div>
     <div class="modal-section">
-      <div class="modal-label">Type</div>
-      <div class="type-grid">
-        <div class="type-opt selected" data-type="checkbox" onclick="selectType('checkbox',this)"><div class="type-icon">✓</div><div class="type-label">Checkbox</div></div>
-        <div class="type-opt" data-type="quantity" onclick="selectType('quantity',this)"><div class="type-icon">⟨n⟩</div><div class="type-label">Quantity</div></div>
-        <div class="type-opt" data-type="time" onclick="selectType('time',this)"><div class="type-icon">◷</div><div class="type-label">Time</div></div>
+      <div class="modal-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Type <span style="color:var(--text3);font-size:8px;letter-spacing:1px;">(select one or more)</span></span>
+      </div>
+      <div class="type-grid" id="typeGrid">
+        <div class="type-opt selected" data-type="checkbox" onclick="toggleType('checkbox',this)">
+          <div class="type-icon">✓</div><div class="type-label">Checkbox</div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:1px;margin-top:3px;">did you or didn't you</div>
+        </div>
+        <div class="type-opt" data-type="quantity" onclick="toggleType('quantity',this)">
+          <div class="type-icon">⟨n⟩</div><div class="type-label">Quantity</div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:1px;margin-top:3px;">log a number</div>
+        </div>
+        <div class="type-opt" data-type="time" onclick="toggleType('time',this)">
+          <div class="type-icon">◷</div><div class="type-label">Time</div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:1px;margin-top:3px;">log a clock time</div>
+        </div>
+        <div class="type-opt" data-type="duration" onclick="toggleType('duration',this)">
+          <div class="type-icon">⏱</div><div class="type-label">Duration</div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:1px;margin-top:3px;">log minutes spent</div>
+        </div>
+        <div class="type-opt" data-type="rating" onclick="toggleType('rating',this)">
+          <div class="type-icon">★</div><div class="type-label">Rating</div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:1px;margin-top:3px;">rate 1–10</div>
+        </div>
+        <div class="type-opt" data-type="distance" onclick="toggleType('distance',this)">
+          <div class="type-icon">↗</div><div class="type-label">Distance</div>
+          <div style="font-size:7px;color:var(--text3);letter-spacing:1px;margin-top:3px;">km, miles, steps</div>
+        </div>
+      </div>
+      <div style="font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:6px;line-height:1.6;">
+        Tip: combine Checkbox + Quantity to both mark done and log a number (e.g. gym ✓ + sets logged)
       </div>
     </div>
     <div class="extra-fields" id="quantityFields" style="display:none;">
-      <div class="modal-label">Quantity Settings</div>
+      <div class="modal-label">Quantity / Distance / Duration Settings</div>
       <div class="row-2">
-        <div><div style="font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:4px;">UNIT</div><input class="input" id="habitUnit" placeholder="hrs, pages, km..." style="margin-bottom:0;"></div>
+        <div><div style="font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:4px;">UNIT</div><input class="input" id="habitUnit" placeholder="hrs, pages, km, min..." style="margin-bottom:0;"></div>
         <div><div style="font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:4px;">DAILY TARGET</div><input class="input" id="habitTarget" type="number" placeholder="e.g. 8" style="margin-bottom:0;"></div>
       </div>
     </div>
@@ -728,7 +754,7 @@ select.input{cursor:pointer;}
   <div class="ai-messages" id="aiMessages">
     <div class="ai-msg ai">
       <div class="ai-msg-label">// Cave AI</div>
-      <div>I have full access to your habits, scores, streaks, goals and journal. Ask me anything about your data or patterns.</div>
+      <div id="aiWelcome">Loading...</div>
     </div>
   </div>
   <div class="ai-suggestions" id="aiSuggestions">
@@ -748,7 +774,7 @@ select.input{cursor:pointer;}
 
 <script>
 // ── PASSWORD ─────────────────────────────────────────────────
-const PASS='cave2025';
+const PASS='13cave';
 function checkPassword(){
   const v=document.getElementById('gateInput').value;
   if(v===PASS){
@@ -792,6 +818,20 @@ const PRESETS=[
   {name:'Work',color:'#ffb800'},{name:'Life',color:'#ff7eb3'},{name:'General',color:'#00d2ff'}
 ];
 const PALETTE=['#00d2ff','#00ff9d','#7b61ff','#ffb800','#ff7eb3','#ff3d5a','#00e5ff','#69ff47','#ff9d00','#ff61dc'];
+
+// ── HABIT TYPE HELPERS ────────────────────────────────────────
+function habitHasType(h,type){return h.type&&h.type.split(',').includes(type);}
+function habitIsCheckbox(h){return habitHasType(h,'checkbox');}
+function habitIsNumeric(h){return habitHasType(h,'quantity')||habitHasType(h,'distance')||habitHasType(h,'duration');}
+function habitIsTime(h){return habitHasType(h,'time');}
+function habitIsRating(h){return habitHasType(h,'rating');}
+function habitPrimaryType(h){
+  if(habitIsNumeric(h))return h.type.split(',').find(t=>['quantity','distance','duration'].includes(t));
+  if(habitIsTime(h))return'time';
+  if(habitIsRating(h))return'rating';
+  return'checkbox';
+}
+
 
 // ── DATE HELPERS ──────────────────────────────────────────────
 const today=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -851,10 +891,14 @@ function closeModal(id){
   if(id==='habitModal'){document.getElementById('habitNameInput').value='';document.getElementById('customCatInput').value='';}
   if(id==='goalModal'){document.getElementById('goalNameInput').value='';document.getElementById('goalDeadlineInput').value='';}
 }
+let selectedTypes=new Set(['checkbox']); // multi-select set
+
 function initHabitModal(){
-  selectedType='checkbox';selectedCategory='General';selectedColor='#00d2ff';
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('selected'));
-  document.querySelector('[data-type="checkbox"]').classList.add('selected');
+  selectedTypes=new Set(['checkbox']);
+  selectedCategory='General';selectedColor='#00d2ff';
+  document.querySelectorAll('.type-opt').forEach(o=>{
+    o.classList.toggle('selected',o.dataset.type==='checkbox');
+  });
   document.getElementById('quantityFields').style.display='none';
   document.getElementById('timeFields').style.display='none';
   const cp=document.getElementById('catPicker');
@@ -862,12 +906,36 @@ function initHabitModal(){
     +`<div class="cat-opt custom-cat-opt" onclick="selectCat('custom','',this)">+ Custom</div>`;
   renderColorPicker();
 }
-function selectType(type,el){
-  selectedType=type;
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('quantityFields').style.display=type==='quantity'?'block':'none';
-  document.getElementById('timeFields').style.display=type==='time'?'block':'none';
+
+function toggleType(type,el){
+  // Checkbox can always be combined with others
+  // quantity/distance/duration are mutually exclusive with each other
+  // time is standalone or with checkbox
+  const numericTypes=new Set(['quantity','distance','duration']);
+  if(type==='checkbox'){
+    if(selectedTypes.has('checkbox')&&selectedTypes.size>1){
+      selectedTypes.delete('checkbox');
+    }else{
+      selectedTypes.add('checkbox');
+    }
+  }else if(numericTypes.has(type)){
+    // Remove other numeric types
+    numericTypes.forEach(t=>{if(t!==type)selectedTypes.delete(t);});
+    if(selectedTypes.has(type))selectedTypes.delete(type);
+    else selectedTypes.add(type);
+  }else if(type==='time'||type==='rating'){
+    if(selectedTypes.has(type))selectedTypes.delete(type);
+    else selectedTypes.add(type);
+  }
+  // Must have at least one type
+  if(selectedTypes.size===0)selectedTypes.add('checkbox');
+  // Sync UI
+  document.querySelectorAll('.type-opt').forEach(o=>o.classList.toggle('selected',selectedTypes.has(o.dataset.type)));
+  // Show/hide extra fields
+  const hasNumeric=[...selectedTypes].some(t=>numericTypes.has(t));
+  const hasTime=selectedTypes.has('time');
+  document.getElementById('quantityFields').style.display=hasNumeric?'block':'none';
+  document.getElementById('timeFields').style.display=hasTime?'block':'none';
 }
 function selectCat(name,color,el){
   if(name==='custom'){document.getElementById('customCatInput').style.display='block';selectedCategory='';document.querySelectorAll('.cat-opt').forEach(o=>{o.classList.remove('selected');o.style.background='';o.style.borderColor='';o.style.color='';});el.classList.add('selected');return;}
@@ -887,10 +955,17 @@ function renderColorPicker(){
 async function saveHabit(){
   let name=document.getElementById('habitNameInput').value.trim();if(!name)return;
   let category=selectedCategory||document.getElementById('customCatInput').value.trim()||'General';
-  const unit=selectedType==='quantity'?document.getElementById('habitUnit').value.trim():selectedType==='time'?document.getElementById('habitTimeLabel').value.trim()||'Time':'';
-  const target=selectedType==='quantity'&&document.getElementById('habitTarget').value?parseFloat(document.getElementById('habitTarget').value):null;
+  // Store types as comma-separated string e.g. "checkbox,quantity"
+  const typeStr=[...selectedTypes].join(',');
+  const primaryType=[...selectedTypes].find(t=>t!=='checkbox')||'checkbox';
+  const unit=['quantity','distance','duration'].some(t=>selectedTypes.has(t))?document.getElementById('habitUnit').value.trim():
+    selectedTypes.has('time')?document.getElementById('habitTimeLabel').value.trim()||'Time':'';
+  const target=['quantity','distance','duration'].some(t=>selectedTypes.has(t))&&document.getElementById('habitTarget').value
+    ?parseFloat(document.getElementById('habitTarget').value):null;
   const btn=document.getElementById('habitSaveBtn');btn.disabled=true;setSyncStatus('syncing');
-  const{data}=await sb.from('habits').insert({name,type:selectedType,category,color:selectedColor,unit,target}).select().single();
+  const{data}=await sb.from('habits').insert({
+    name,type:typeStr,category,color:selectedColor,unit,target
+  }).select().single();
   if(data)habits.push(data);
   setSyncStatus('ok');btn.disabled=false;closeModal('habitModal');render();
 }
@@ -980,29 +1055,39 @@ function renderHabits(){
           if(h.type==='quantity'&&valD&&h.target){const pct=Math.min(1,parseFloat(valD)/parseFloat(h.target));bg=`rgba(${hexToRgb(color)},${0.2+pct*0.8})`;}
           return`<div class="week-day${doneD?' done':''}${d===td?' today':''}" style="${doneD?`background:${bg};box-shadow:0 0 4px ${color};`:''}"></div>`;
         }).join('');
+        // Build log controls based on type(s)
         let logHtml='';
-        if(h.type==='quantity'){
+        if(habitIsNumeric(h)||habitIsRating(h)){
           const cur=val?parseFloat(val):0;
+          const maxV=habitIsRating(h)?10:null;
           logHtml=`<div class="log-inline" onclick="event.stopPropagation()">
             <button class="log-btn" onclick="logHabitValue(${h.id},Math.max(0,${cur}-1))">−</button>
-            <input class="log-input-sm" type="number" value="${cur||0}" min="0" onchange="logHabitValue(${h.id},parseFloat(this.value)||0)">
+            <input class="log-input-sm" type="number" value="${cur||0}" min="0"${maxV?` max="${maxV}"`:''}
+              onchange="logHabitValue(${h.id},parseFloat(this.value)||0)">
             <span class="log-unit">${h.unit||''}</span>
             <button class="log-btn" onclick="logHabitValue(${h.id},${cur}+1)">+</button>
           </div>`;
-        }else if(h.type==='time'){
+        }else if(habitIsTime(h)){
           logHtml=`<div class="log-inline" onclick="event.stopPropagation()">
-            <input class="log-input-sm" type="time" value="${val||''}" style="width:80px;" onchange="logHabitValue(${h.id},this.value)">
+            <input class="log-input-sm" type="time" value="${val||''}" style="width:80px;"
+              onchange="logHabitValue(${h.id},this.value)">
           </div>`;
-        }else{
-          logHtml=`<div class="habit-check${done?' done-check':''}" style="${done?`background:${color};border-color:${color};`:`border-color:${color}40;`}" onclick="toggleHabit(${h.id})"><span class="checkmark" style="display:${done?'block':'none'}">✓</span></div>`;
         }
-        const valDisplay=h.type==='quantity'&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):h.type==='time'&&val?val:'';
+        const checkHtml=habitIsCheckbox(h)?`<div class="habit-check${done?' done-check':''}"
+          style="${done?`background:${color};border-color:${color};`:`border-color:${color}40;`}"
+          onclick="toggleHabit(${h.id})"><span class="checkmark" style="display:${done?'block':'none'}">✓</span></div>`:'';
+        if(!habitIsNumeric(h)&&!habitIsTime(h)&&!habitIsRating(h)){logHtml=checkHtml;}
+        const hasBoth=habitIsCheckbox(h)&&(habitIsNumeric(h)||habitIsTime(h)||habitIsRating(h));
+        const valDisplay=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):habitIsTime(h)&&val?val:habitIsRating(h)&&val?`${val}/10`:'';
+        // Type label for meta
+        const typeLabel=hasBoth?h.type.replace('checkbox,','').replace(',','+'):h.type!=='checkbox'?h.type.replace(',','+'):'';
+        // Note for today
         const note=habitLog[td]&&habitLog[td][h.id]?habitLog[td][h.id].note||'':'';
         const noteHtml=done
           ?`<div class="habit-note-wrap">
               ${note
                 ?`<div class="habit-note-saved" onclick="editHabitNote(${h.id})" title="Click to edit">// ${note}</div>`
-                :`<input class="habit-note-input" type="text" placeholder="add a note for today..." value="" 
+                :`<input class="habit-note-input" type="text" placeholder="add a note for today..."
                     onblur="if(this.value.trim())saveHabitNote(${h.id},this.value.trim())"
                     onkeydown="if(event.key==='Enter'&&this.value.trim()){saveHabitNote(${h.id},this.value.trim());this.blur()}">`
               }
@@ -1010,9 +1095,13 @@ function renderHabits(){
           :'';
         return`<div class="habit-item${done?' done':''}" style="border-left-color:${color}40;">
           <div class="habit-color-bar" style="background:${color};box-shadow:0 0 6px ${color};"></div>
-          ${h.type==='checkbox'?logHtml:''}
-          <div class="habit-info"><div class="habit-name">${h.name}</div><div class="habit-meta">${cat}${h.unit&&h.type==='quantity'?' · '+h.unit:h.type==='time'?' · Time':''}</div></div>
-          ${h.type!=='checkbox'?logHtml:''}
+          ${hasBoth?checkHtml:''}
+          ${!hasBoth?logHtml:''}
+          <div class="habit-info">
+            <div class="habit-name">${h.name}</div>
+            <div class="habit-meta">${cat}${typeLabel?' · '+typeLabel:''}</div>
+          </div>
+          ${hasBoth?logHtml:''}
           ${valDisplay?`<div class="log-val-display" style="color:${color}">${valDisplay}</div>`:''}
           <div class="habit-streak">${streak>0?`${streak}D`:'—'}</div>
           <button class="habit-delete" onclick="event.stopPropagation();deleteHabit(${h.id})">×</button>
@@ -1127,7 +1216,7 @@ function renderJournal(){
 // ── DASHBOARD ─────────────────────────────────────────────────
 function renderDashboard(){
   const td=today();
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   const total=cbH.length,done=cbH.filter(h=>isHabitDone(h.id,td)).length;
   const active=goals.filter(g=>g.progress<100).length;
   const avgP=goals.length?Math.round(goals.reduce((s,g)=>s+g.progress,0)/goals.length):0;
@@ -1176,7 +1265,7 @@ async function toggleHabitDash(id){const h=habits.find(h=>h.id===id);if(!h||h.ty
 // ── SCORE ─────────────────────────────────────────────────────
 function calcScore(fromDate,toDate){
   const days=getDaysInRange(fromDate,toDate);
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   let habitScore=0;
   if(cbH.length){
     const c=days.map(d=>cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length);
@@ -1191,7 +1280,7 @@ function calcScore(fromDate,toDate){
 }
 
 function calcCatScore(cat,fromDate,toDate){
-  const catH=habits.filter(h=>(h.category||'General')===cat&&h.type==='checkbox');
+  const catH=habits.filter(h=>(h.category||'General')===cat&&habitIsCheckbox(h));
   if(!catH.length)return null;
   const days=getDaysInRange(fromDate,toDate);
   const c=days.map(d=>catH.filter(h=>isHabitDone(h.id,d)).length/catH.length);
@@ -1269,7 +1358,7 @@ function stdDev(arr){
 
 // Consistency index: 100 - normalised stddev. High avg + low variance = best score
 function calcConsistency(fromDate,toDate){
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   if(!cbH.length)return null;
   const days=getDaysInRange(fromDate,toDate);
   if(days.length<3)return null;
@@ -1295,7 +1384,7 @@ function calcMomentum(fromDate,toDate){
 
 // Day of week completion rates
 function calcDayOfWeek(fromDate,toDate){
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   if(!cbH.length)return null;
   const days=getDaysInRange(fromDate,toDate);
   const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1314,7 +1403,7 @@ function calcMotPerf(fromDate,toDate){
   return journal
     .filter(j=>j.date>=fromDate&&j.date<=toDate&&j.motivation)
     .map(j=>{
-      const cbH=habits.filter(h=>h.type==='checkbox');
+      const cbH=habits.filter(habitIsCheckbox);
       const perf=cbH.length?Math.round(cbH.filter(h=>isHabitDone(h.id,j.date)).length/cbH.length*100):0;
       return{x:j.motivation,y:perf,date:j.date};
     });
@@ -1322,7 +1411,7 @@ function calcMotPerf(fromDate,toDate){
 
 // Weakest habits — sorted by miss rate descending
 function calcWeakest(fromDate,toDate){
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   const days=getDaysInRange(fromDate,toDate);
   return cbH.map(h=>{
     const done=days.filter(d=>isHabitDone(h.id,d)).length;
@@ -1333,7 +1422,7 @@ function calcWeakest(fromDate,toDate){
 
 // Habit correlation — for each pair, % of days both done when either done
 function calcCorrelations(fromDate,toDate){
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   if(cbH.length<2)return[];
   const days=getDaysInRange(fromDate,toDate);
   const pairs=[];
@@ -1452,7 +1541,19 @@ function baseScales(yMax,pct){return{
 };}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderColor:'rgba(0,210,255,0.25)',borderWidth:1,titleColor:TC,bodyColor:'#c8e8f0',titleFont:CF,bodyFont:CF};}
-const zoomPlugin={zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'},pan:{enabled:true,mode:'x'}};
+const zoomPlugin={
+  zoom:{
+    wheel:{enabled:true,speed:0.08},
+    pinch:{enabled:true},
+    mode:'x'
+  },
+  pan:{
+    enabled:true,
+    mode:'x',
+    speed:8,
+    threshold:3
+  }
+};
 
 function renderScoreChart(){
   destroyChart('chartScore');
@@ -1499,7 +1600,7 @@ function renderScoreChart(){
 
 function renderConsistencyChart(fromDate,toDate){
   destroyChart('chartConsistency');
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   if(!cbH.length){document.getElementById('chartConsistency').style.display='none';return;}
   document.getElementById('chartConsistency').style.display='block';
   const weeks=[];let cur=fromDate;
@@ -1620,7 +1721,7 @@ function renderMotPerfChart(fromDate,toDate){
 
 function renderHabitChart(){
   destroyChart('chartHabit');
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   const buckets=buildBuckets(activePeriod,chartOffsets.habit);
   const data=buckets.map(b=>!cbH.length||!b.days.length?0:Math.round(b.days.reduce((s,d)=>s+cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length,0)/b.days.length*100));
   document.getElementById('habitNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.habit);
@@ -1677,36 +1778,47 @@ function renderGoalChart(){
 // ── COMPARE CHART ─────────────────────────────────────────────
 function renderCompareChips(){
   const el=document.getElementById('compareChips');
-  const qtH=habits.filter(h=>h.type!=='checkbox');
+  const qtH=habits.filter(h=>!habitIsCheckbox(h)||habitIsNumeric(h)||habitIsTime(h));
   if(!qtH.length){el.innerHTML='<span style="color:var(--text2);font-size:10px;letter-spacing:1px;">Add quantity or time habits to compare.</span>';return;}
-  el.innerHTML=qtH.map(h=>{
+  el.innerHTML=`<span style="color:var(--text2);font-size:9px;letter-spacing:1px;align-self:center;">Select up to 5:</span> `+qtH.map(h=>{
     const sel=compareSelected.includes(h.id);
     const color=h.color||getCatColor(h.category||'General');
-    return`<div class="habit-select-chip${sel?' selected':''}" style="${sel?`background:${color};border-color:${color};`:`border-color:${color}40;`}" onclick="toggleCompare(${h.id})">
+    const disabled=!sel&&compareSelected.length>=5;
+    return`<div class="habit-select-chip${sel?' selected':''}${disabled?' disabled':''}"
+      style="${sel?`background:${color};border-color:${color};`:`border-color:${color}40;opacity:${disabled?0.35:1};`}"
+      onclick="${disabled?'':'toggleCompare('+h.id+')'}">
       <div class="chip-dot" style="background:${color};box-shadow:0 0 4px ${color};"></div>
       ${h.name}${h.unit?' ('+h.unit+')':''}
     </div>`;
   }).join('');
 }
+
 function toggleCompare(id){
   if(compareSelected.includes(id))compareSelected=compareSelected.filter(i=>i!==id);
-  else if(compareSelected.length<3)compareSelected.push(id);
+  else if(compareSelected.length<5)compareSelected.push(id);
   renderCompareChips();renderCompareChart();
 }
+
 function renderCompareChart(){
   destroyChart('chartCompare');
   const canvas=document.getElementById('chartCompare');
   const ctx=canvas.getContext('2d');
   if(!compareSelected.length){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='rgba(0,210,255,0.18)';ctx.font="11px 'Share Tech Mono'";ctx.textAlign='center';
-    ctx.fillText('// Select habits above to compare',canvas.width/2,canvas.height/2);
+    setTimeout(()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(0,210,255,0.18)';ctx.font="11px 'Share Tech Mono'";
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('// Select habits above to compare',canvas.width/2,canvas.height/2);
+    },30);
     return;
   }
   const buckets=buildBuckets(activePeriod,0);
-  const axisPositions=['left','right','left'];
-  const axisOffsets=[0,0,60]; // third axis offset from left edge
+  // Axis positions: alternate left/right for up to 5
+  // 0=left, 1=right, 2=left(offset), 3=right(offset), 4=left(offset2)
+  const axisPositions=['left','right','left','right','left'];
+  const axisOffsets=[0,0,1,1,2];
   const scales={x:baseScales(0,false).x};
+
   const datasets=compareSelected.map((id,idx)=>{
     const h=habits.find(h=>h.id===id);if(!h)return null;
     const color=h.color||getCatColor(h.category||'General');
@@ -1714,15 +1826,22 @@ function renderCompareChart(){
     const data=buckets.map(b=>{
       const vals=b.days.map(d=>getHabitValue(id,d)).filter(v=>v!==null);
       if(!vals.length)return 0;
-      if(h.type==='time'){const mins=vals.map(v=>{const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});return Math.round(mins.reduce((a,b)=>a+b,0)/mins.length);}
+      if(h.type==='time'){
+        const mins=vals.map(v=>{const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});
+        return Math.round(mins.reduce((a,b)=>a+b,0)/mins.length);
+      }
       return parseFloat((vals.reduce((a,b)=>a+parseFloat(b),0)/vals.length).toFixed(2));
     });
     const nonZero=data.filter(v=>v>0);
     const dataMax=nonZero.length?Math.max(...nonZero):10;
     const dataMin=nonZero.length?Math.min(...nonZero):0;
     const pad=(dataMax-dataMin)*0.2||dataMax*0.2||1;
+    const pos=axisPositions[idx];
+    const offset=axisOffsets[idx];
     scales[axisId]={
-      position:axisPositions[idx],
+      position:pos,
+      offset:offset>0,
+      display:idx<4, // hide 5th axis to avoid clutter, it shares scale with idx 0
       min:h.type==='time'?Math.max(0,dataMin-pad):0,
       max:dataMax+pad,
       grid:{color:idx===0?GC:'transparent'},
@@ -1732,12 +1851,28 @@ function renderCompareChart(){
           ?v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}
           :v=>v+(h.unit?` ${h.unit}`:'')}
     };
-    return{label:h.name+(h.unit?` (${h.unit})`:''),data,borderColor:color,backgroundColor:`rgba(${hexToRgb(color)},0.06)`,
-      pointBackgroundColor:color,pointRadius:3,pointHoverRadius:5,tension:0.3,fill:false,spanGaps:true,yAxisID:axisId};
+    return{
+      label:h.name+(h.unit?` (${h.unit})`:''),
+      data,borderColor:color,
+      backgroundColor:`rgba(${hexToRgb(color)},0.06)`,
+      pointBackgroundColor:color,pointRadius:3,pointHoverRadius:6,
+      tension:0.3,fill:false,spanGaps:true,yAxisID:axisId,
+      borderWidth:idx===0?2:1.5
+    };
   }).filter(Boolean);
-  charts['chartCompare']=new Chart(ctx,{type:'line',data:{labels:buckets.map(b=>b.label),datasets},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:14}},tooltip:tooltipDefaults(),zoom:zoomPlugin},scales}});
+
+  charts['chartCompare']=new Chart(ctx,{type:'line',
+    data:{labels:buckets.map(b=>b.label),datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12}},
+        tooltip:tooltipDefaults(),
+        zoom:zoomPlugin
+      },
+      scales
+    }
+  });
 }
 
 // ── YEAR HEATMAP ──────────────────────────────────────────────
@@ -1811,18 +1946,41 @@ function editHabitNote(id){
 }
 
 // ── AI PANEL ──────────────────────────────────────────────────
+let aiApiKey=localStorage.getItem('cave_ai_key')||'';
+
 function toggleAI(){
   const panel=document.getElementById('aiPanel');
   const btn=document.getElementById('aiBtn');
   const open=panel.classList.toggle('open');
   btn.classList.toggle('open',open);
   btn.textContent=open?'×':'⬡';
-  if(open)document.getElementById('aiInput').focus();
+  if(open){initAIWelcome();document.getElementById('aiInput').focus();}
+}
+
+function initAIWelcome(){
+  const welcome=document.getElementById('aiWelcome');
+  if(!welcome)return;
+  if(!aiApiKey){
+    welcome.innerHTML='No API key set. <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="promptApiKey()">Set your Anthropic API key</span> to enable Cave AI.';
+  }else{
+    welcome.innerHTML='I have full access to your habits, scores, streaks, goals and journal. Ask me anything about your data or patterns.';
+  }
+}
+
+function promptApiKey(){
+  const key=prompt('Enter your Anthropic API key (starts with sk-ant-):\n\nGet one at console.anthropic.com\nStored only in your browser, never shared.');
+  if(key&&key.trim().startsWith('sk-')){
+    aiApiKey=key.trim();
+    localStorage.setItem('cave_ai_key',aiApiKey);
+    initAIWelcome();
+  }else if(key!==null){
+    alert("Doesn\'t look like a valid key — it should start with sk-ant-");
+  }
 }
 
 function buildDataContext(){
   const td=today();
-  const cbH=habits.filter(h=>h.type==='checkbox');
+  const cbH=habits.filter(habitIsCheckbox);
   const todayDone=cbH.filter(h=>isHabitDone(h.id,td)).length;
   const{start,end}=getPeriodRange('week');
   const sc=calcScore(start,end);
@@ -1881,26 +2039,34 @@ async function sendAI(){
   messagesEl.scrollTop=messagesEl.scrollHeight;
 
   try{
-    const systemPrompt=buildDataContext();
+    
+    if(!aiApiKey){promptApiKey();document.getElementById(thinkId)?.remove();sendBtn.disabled=false;return;}
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':aiApiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:600,
-        system:systemPrompt,
+        system:buildDataContext(),
         messages:[{role:'user',content:msg}]
       })
     });
     const data=await res.json();
-    const reply=data.content?.[0]?.text||'Sorry, I could not process that.';
+    if(data.error){throw new Error(data.error.message||'API error');}
+    const reply=data.content?.[0]?.text||'No response received.';
 
     // Remove thinking, add real response
     document.getElementById(thinkId)?.remove();
     messagesEl.innerHTML+=`<div class="ai-msg ai"><div class="ai-msg-label">// Cave AI</div><div>${reply.replace(/\n/g,'<br>')}</div></div>`;
   }catch(e){
     document.getElementById(thinkId)?.remove();
-    messagesEl.innerHTML+=`<div class="ai-msg ai"><div class="ai-msg-label">// Cave AI</div><div style="color:var(--red)">Connection error. Check your setup.</div></div>`;
+    const isAuth=e.message?.includes('401')||e.message?.includes('invalid')||e.message?.toLowerCase().includes('key');
+    messagesEl.innerHTML+=`<div class="ai-msg ai"><div class="ai-msg-label">// Cave AI</div><div style="color:var(--red)">${isAuth?'Invalid API key — <span style=\'cursor:pointer;color:var(--accent);text-decoration:underline\' onclick=\'promptApiKey()\'>update it here</span>':'Error: '+e.message}</div></div>`;
     console.error(e);
   }
 
