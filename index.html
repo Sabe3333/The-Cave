@@ -379,6 +379,8 @@ select.input{cursor:pointer;}
 .chart-wrap{position:relative;height:190px;}
 .chart-wrap-md{position:relative;height:220px;}
 .chart-wrap-lg{position:relative;height:260px;}
+/* Prevent chart zoom from hijacking page scroll - canvas captures wheel events only */
+.chart-wrap canvas,.chart-wrap-md canvas,.chart-wrap-lg canvas{touch-action:none;display:block;}
 .chart-hint{font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:5px;text-align:right;}
 .chart-nav{display:flex;gap:3px;align-items:center;}
 .chart-nav-btn{background:var(--text3);border:1px solid var(--border);color:var(--text2);width:18px;height:18px;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;clip-path:polygon(2px 0%,100% 0%,100% calc(100% - 2px),calc(100% - 2px) 100%,0% 100%,0% 2px);}
@@ -557,136 +559,74 @@ select.input{cursor:pointer;}
 <!-- STATS -->
 <div class="section" id="section-stats">
   <div class="section-header"><div class="section-title"><span>//</span> Stats</div></div>
-
-  <!-- SCORE + MOMENTUM ROW -->
   <div class="stats-top-row">
     <div class="score-banner" id="scoreBanner"></div>
     <div class="momentum-card" id="momentumCard"></div>
   </div>
-
-  <!-- PERSONAL RECORDS + GOAL PREDICTIONS -->
   <div class="charts-grid" style="margin-bottom:10px;">
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Personal Records</span></div>
-      <div id="personalRecords" style="margin-top:4px;"></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Goal Predictions</span></div>
-      <div id="goalPredictions" style="margin-top:4px;"></div>
-    </div>
+    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Personal Records</span></div><div id="personalRecords" style="margin-top:4px;"></div></div>
+    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Goal Predictions</span></div><div id="goalPredictions" style="margin-top:4px;"></div></div>
   </div>
-
-  <!-- CATEGORY SCORES -->
   <div class="cat-scores-row" id="catScoresRow"></div>
-
-  <!-- PERIOD SWITCHER -->
   <div class="period-switcher">
     <button class="btn-ghost active-filter" onclick="setPeriod('week',this)">This Week</button>
     <button class="btn-ghost" onclick="setPeriod('month',this)">This Month</button>
     <button class="btn-ghost" onclick="setPeriod('3months',this)">3 Months</button>
     <button class="btn-ghost" onclick="setPeriod('all',this)">All Time</button>
   </div>
-
-  <!-- SCORE OVER TIME — full width -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card full">
-      <div class="chart-title">
-        <span class="chart-title-text">Discipline Score Over Time</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button class="reset-zoom-btn" onclick="resetZoom('chartScore')">Reset</button>
-          <div class="chart-nav">
-            <button class="chart-nav-btn" onclick="shiftScoreChart(-1)">‹</button>
-            <span class="chart-nav-label" id="scoreNavLabel"></span>
-            <button class="chart-nav-btn" onclick="shiftScoreChart(1)">›</button>
-          </div>
-        </div>
-      </div>
+      <div class="chart-title"><span class="chart-title-text">Discipline Score Over Time</span><button class="reset-zoom-btn" onclick="resetZoom('chartScore')">Reset</button></div>
       <div class="chart-wrap-lg"><canvas id="chartScore"></canvas></div>
       <div class="chart-hint">scroll to zoom · drag to pan</div>
     </div>
   </div>
-
-  <!-- CONSISTENCY + DAY OF WEEK -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card">
       <div class="chart-title"><span class="chart-title-text">Consistency Index</span></div>
-      <div class="insight-sub">Low variance = real discipline. High average + low spread = locked in.</div>
+      <div class="insight-sub">High avg + low spread = real discipline.</div>
       <div class="chart-wrap-md"><canvas id="chartConsistency"></canvas></div>
+      <div class="chart-hint">scroll to zoom · drag to pan</div>
     </div>
     <div class="chart-card">
       <div class="chart-title"><span class="chart-title-text">Best Day of Week</span></div>
-      <div class="insight-sub">Which days you actually execute vs drop off.</div>
+      <div class="insight-sub">Which days you execute vs drop off.</div>
       <div class="chart-wrap-md"><canvas id="chartDayOfWeek"></canvas></div>
     </div>
   </div>
-
-  <!-- MOTIVATION VS PERFORMANCE + HABIT COMPLETION -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Motivation vs Performance</span></div>
-      <div class="insight-sub">Does how you feel actually affect what you do?</div>
+      <div class="chart-title"><span class="chart-title-text">Motivation vs Performance</span><button class="reset-zoom-btn" onclick="resetZoom('chartMotPerf')">Reset</button></div>
+      <div class="insight-sub">Does how you feel affect what you do?</div>
       <div class="chart-wrap-md"><canvas id="chartMotPerf"></canvas></div>
+      <div class="chart-hint">scroll to zoom · drag to pan (xy)</div>
     </div>
     <div class="chart-card">
-      <div class="chart-title">
-        <span class="chart-title-text">Habit Completion</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button class="reset-zoom-btn" onclick="resetZoom('chartHabit')">Reset</button>
-          <div class="chart-nav">
-            <button class="chart-nav-btn" onclick="shiftChart('habit',-1)">‹</button>
-            <span class="chart-nav-label" id="habitNavLabel"></span>
-            <button class="chart-nav-btn" onclick="shiftChart('habit',1)">›</button>
-          </div>
-        </div>
-      </div>
+      <div class="chart-title"><span class="chart-title-text">Habit Completion</span><button class="reset-zoom-btn" onclick="resetZoom('chartHabit')">Reset</button></div>
       <div class="chart-wrap-md"><canvas id="chartHabit"></canvas></div>
       <div class="chart-hint">scroll to zoom · drag to pan</div>
     </div>
   </div>
-
-  <!-- WEAKEST LINKS + HABIT CORRELATION -->
   <div class="charts-grid" style="margin-bottom:10px;">
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Weakest Links</span></div>
-      <div class="insight-sub">Habits with most missed days in this period.</div>
-      <div id="weakestLinks" style="margin-top:4px;"></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Habit Anchors</span></div>
-      <div class="insight-sub">When you do habit A, how often do you also do B?</div>
-      <div id="habitCorrelation" style="margin-top:4px;overflow-y:auto;max-height:220px;"></div>
-    </div>
+    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Weakest Links</span></div><div class="insight-sub">Habits with most missed days.</div><div id="weakestLinks" style="margin-top:4px;"></div></div>
+    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Habit Anchors</span></div><div class="insight-sub">When you do A, how often do you also do B?</div><div id="habitCorrelation" style="margin-top:4px;overflow-y:auto;max-height:220px;"></div></div>
   </div>
-
-  <!-- MOTIVATION + GOAL + JOURNAL -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card">
-      <div class="chart-title">
-        <span class="chart-title-text">Motivation Trend</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button class="reset-zoom-btn" onclick="resetZoom('chartMot')">Reset</button>
-          <div class="chart-nav">
-            <button class="chart-nav-btn" onclick="shiftChart('mot',-1)">‹</button>
-            <span class="chart-nav-label" id="motNavLabel"></span>
-            <button class="chart-nav-btn" onclick="shiftChart('mot',1)">›</button>
-          </div>
-        </div>
-      </div>
+      <div class="chart-title"><span class="chart-title-text">Motivation Trend</span><button class="reset-zoom-btn" onclick="resetZoom('chartMot')">Reset</button></div>
       <div class="chart-wrap-md"><canvas id="chartMot"></canvas></div>
       <div class="chart-hint">scroll to zoom · drag to pan</div>
     </div>
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Goal Progress</span></div>
-      <div class="chart-wrap-md"><canvas id="chartGoal"></canvas></div>
-    </div>
+    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Goal Progress</span></div><div class="chart-wrap-md"><canvas id="chartGoal"></canvas></div></div>
   </div>
-
-  <!-- COMPARE -->
   <div class="compare-panel">
     <div class="compare-title">Compare Habits</div>
     <div class="habit-select-grid" id="compareChips"></div>
     <div class="chart-wrap-lg"><canvas id="chartCompare"></canvas></div>
-    <div class="chart-hint">scroll to zoom · drag to pan</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+      <div class="chart-hint">scroll zoom · drag pan · xy free</div>
+      <button class="reset-zoom-btn" onclick="resetZoom('chartCompare')">Reset</button>
+    </div>
   </div>
 </div>
 
@@ -806,6 +746,14 @@ document.addEventListener('mousemove',e=>{
   document.documentElement.style.setProperty('--mouse-x',e.clientX+'px');
   document.documentElement.style.setProperty('--mouse-y',e.clientY+'px');
 });
+
+// Prevent chart canvas wheel events from scrolling the page
+// Use capture phase so we intercept before the plugin
+document.addEventListener('wheel',e=>{
+  if(e.target&&e.target.tagName==='CANVAS')e.preventDefault();
+},{passive:false,capture:true});
+
+
 
 // ── SUPABASE ─────────────────────────────────────────────────
 const{createClient}=supabase;
@@ -1560,8 +1508,8 @@ function setPeriod(p,el){
   document.querySelectorAll('.period-switcher .btn-ghost').forEach(b=>b.classList.remove('active-filter'));
   el.classList.add('active-filter');renderStats();
 }
-function shiftScoreChart(dir){if(activePeriod==='all')return;chartOffsets.score=Math.max(0,chartOffsets.score+dir);renderStats();}
-function shiftChart(name,dir){if(activePeriod==='all')return;chartOffsets[name]=Math.max(0,chartOffsets[name]+dir);renderStats();}
+function shiftScoreChart(dir){}  // arrows removed
+function shiftChart(name,dir){}  // arrows removed
 function resetZoom(id){if(charts[id]&&charts[id].resetZoom)charts[id].resetZoom();}
 
 // Standard deviation helper
@@ -1761,23 +1709,23 @@ function baseScales(yMax,pct){return{
 };}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderColor:'rgba(0,210,255,0.25)',borderWidth:1,titleColor:TC,bodyColor:'#c8e8f0',titleFont:CF,bodyFont:CF};}
-// Single smooth zoom config used by all charts
-// limits are set per-chart via Chart.js options.plugins.zoom.limits
-const zoomPlugin={
-  zoom:{
-    wheel:{enabled:true,speed:0.12,modifierKey:null},
-    pinch:{enabled:true},
-    mode:'x',
-    scaleMode:'x'
-  },
-  pan:{
-    enabled:true,
-    mode:'x',
-    speed:12,
-    threshold:2,
-    modifierKey:null
-  }
-};
+// Trading-chart feel: smooth, sensitive, no page scroll hijack
+// Each chart gets its own config via makeZoom(mode)
+function makeZoom(mode='x'){
+  return {
+    zoom:{
+      wheel:{enabled:true,speed:0.05},  // very gentle per-tick
+      pinch:{enabled:true},
+      mode:mode
+    },
+    pan:{
+      enabled:true,
+      mode:mode,
+      speed:1,        // 1:1 pixel tracking
+      threshold:1     // respond immediately
+    }
+  };
+}
 
 function renderScoreChart(){
   destroyChart('chartScore');
@@ -1815,7 +1763,7 @@ function renderScoreChart(){
           label:c=>c.datasetIndex===0?`Score: ${c.raw}`:c.datasetIndex===1&&c.raw!=null?`7d avg: ${c.raw}`:null,
           title:items=>items[0]?.datasetIndex===0?items[0].label:null
         }},
-        zoom:{...zoomPlugin,limits:{x:{minRange:2}}}},
+        zoom:makeZoom()},
       scales:{x:baseScales(100,false).x,
         y:{...baseScales(100,false).y,min:0,max:100,
           ticks:{color:TC,font:CF,
@@ -1939,11 +1887,7 @@ function renderMotPerfChart(fromDate,toDate){
           label:c=>c.datasetIndex===0?`Mot ${c.parsed.x}/10 → ${c.parsed.y}% habits`:null,
           title:items=>items[0]?.datasetIndex===0?formatDate(points[items[0].dataIndex]?.date||''):''
         }},
-        zoom:{
-          zoom:{wheel:{enabled:true,speed:0.15},pinch:{enabled:true},mode:'xy'},
-          pan:{enabled:true,mode:'xy',speed:10,threshold:3},
-          limits:{x:{min:0,max:11},y:{min:-10,max:110}}
-        }
+zoom:makeZoom('xy')
       },
       scales:{
         x:{min:0,max:11,ticks:{color:TC,font:CF,stepSize:1,callback:v=>v===0?'':v+'/10'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
@@ -1966,7 +1910,7 @@ function renderHabitChart(){
       borderColor:data.map(v=>v>=70?'#00ff9d':v>=40?'#00d2ff':'#ff3d5a'),
       borderWidth:1,borderRadius:1}]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% done`}},zoom:{...zoomPlugin,limits:{x:{minRange:2}}}},
+      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% done`}},zoom:makeZoom()},
       scales:baseScales(100,true)}});
 }
 
@@ -1975,22 +1919,22 @@ function renderMotChart(){
   const buckets=buildBuckets(activePeriod,chartOffsets.mot);
   const data=buckets.map(b=>{
     const e=journal.filter(j=>b.days.includes(j.date)&&j.motivation);
-    return e.length?parseFloat((e.reduce((s,j)=>s+j.motivation,0)/e.length).toFixed(1)):null;
+    return e.length?Math.round(e.reduce((s,j)=>s+j.motivation,0)/e.length*10)/10:0;
   });
   document.getElementById('motNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.mot);
   const ctx=document.getElementById('chartMot').getContext('2d');
   const grad=ctx.createLinearGradient(0,0,0,220);
   grad.addColorStop(0,'rgba(255,184,0,0.16)');grad.addColorStop(1,'rgba(255,184,0,0)');
-  const pointColors=data.map(v=>v===null?'transparent':v>=8?'#00ff9d':v>=5?'#ffb800':'#ff3d5a');
   charts['chartMot']=new Chart(ctx,{type:'line',
     data:{labels:buckets.map(b=>b.label),datasets:[{
       data,borderColor:'#ffb800',backgroundColor:grad,
-      pointBackgroundColor:pointColors,pointBorderColor:pointColors,
-      pointRadius:data.map(v=>v===null?0:4),tension:0.3,fill:true,spanGaps:true
+      pointBackgroundColor:data.map(v=>v===0?'rgba(255,184,0,0.3)':'#ffb800'),
+      pointRadius:data.map(v=>v===0?2:4),
+      tension:0.3,fill:true,spanGaps:true
     }]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.raw===null?'No entry':`Motivation: ${c.raw}/10`}},zoom:{...zoomPlugin,limits:{x:{minRange:2}}}},
+        tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.raw===null?'No entry':`Motivation: ${c.raw}/10`}},zoom:makeZoom()},
       scales:{x:baseScales(10,false).x,y:{min:0,max:10,ticks:{color:TC,font:CF,stepSize:2},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
 }
 
@@ -2103,7 +2047,7 @@ function renderCompareChart(){
       plugins:{
         legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12}},
         tooltip:tooltipDefaults(),
-        zoom:{...zoomPlugin,limits:{x:{minRange:2}}}
+        zoom:makeZoom()
       },
       scales
     }
