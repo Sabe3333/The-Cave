@@ -1707,16 +1707,21 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderColor:'rgba(0,210,255,0.25)',borderWidth:1,titleColor:TC,bodyColor:'#c8e8f0',titleFont:CF,bodyFont:CF};}
 const zoomPlugin={
   zoom:{
-    wheel:{enabled:true,speed:0.08},
+    wheel:{enabled:true,speed:0.15},
     pinch:{enabled:true},
     mode:'x'
   },
   pan:{
     enabled:true,
     mode:'x',
-    speed:8,
+    speed:10,
     threshold:3
   }
+};
+// Zoom plugin with no x limits so you can always zoom all the way out
+const zoomPluginFull={
+  zoom:{wheel:{enabled:true,speed:0.15},pinch:{enabled:true},mode:'x'},
+  pan:{enabled:true,mode:'x',speed:10,threshold:3}
 };
 
 function renderScoreChart(){
@@ -1878,13 +1883,18 @@ function renderMotPerfChart(fromDate,toDate){
         tooltip:{...tooltipDefaults(),callbacks:{
           label:c=>c.datasetIndex===0?`Mot ${c.parsed.x}/10 → ${c.parsed.y}% habits`:null,
           title:items=>items[0]?.datasetIndex===0?formatDate(points[items[0].dataIndex]?.date||''):''
-        }}
+        }},
+        zoom:{
+          zoom:{wheel:{enabled:true,speed:0.15},pinch:{enabled:true},mode:'xy'},
+          pan:{enabled:true,mode:'xy',speed:10,threshold:3},
+          limits:{x:{min:0,max:11},y:{min:-10,max:110}}
+        }
       },
       scales:{
-        x:{min:1,max:10,ticks:{color:TC,font:CF,stepSize:1},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
+        x:{min:0,max:11,ticks:{color:TC,font:CF,stepSize:1,callback:v=>v===0?'':v+'/10'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
            title:{display:true,text:'// Motivation',color:TC,font:CF}},
-        y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
-           title:{display:true,text:'// Habit %',color:TC,font:CF}}
+        y:{min:-5,max:105,ticks:{color:TC,font:CF,callback:v=>v<0||v>100?'':v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},
+           title:{display:true,text:'// Habits done',color:TC,font:CF}}
       }}});
 }
 
@@ -1995,30 +2005,31 @@ function renderCompareChart(){
     const data=buckets.map(b=>{
       const vals=b.days.map(d=>getHabitValue(id,d)).filter(v=>v!==null);
       if(!vals.length)return 0;
-      if(h.type==='time'){
+      if(habitIsTime(h)){
         const mins=vals.map(v=>{const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});
         return Math.round(mins.reduce((a,b)=>a+b,0)/mins.length);
       }
-      return parseFloat((vals.reduce((a,b)=>a+parseFloat(b),0)/vals.length).toFixed(2));
+      // Round to 1 decimal, no floating point garbage
+      const avg=vals.reduce((a,b)=>a+parseFloat(b),0)/vals.length;
+      return Math.round(avg*10)/10;
     });
     const nonZero=data.filter(v=>v>0);
     const dataMax=nonZero.length?Math.max(...nonZero):10;
     const dataMin=nonZero.length?Math.min(...nonZero):0;
-    const pad=(dataMax-dataMin)*0.2||dataMax*0.2||1;
+    const pad=Math.max((dataMax-dataMin)*0.15,dataMax*0.1,0.5);
     const pos=axisPositions[idx];
-    const offset=axisOffsets[idx];
     scales[axisId]={
       position:pos,
-      offset:offset>0,
-      display:idx<4, // hide 5th axis to avoid clutter, it shares scale with idx 0
-      min:h.type==='time'?Math.max(0,dataMin-pad):0,
-      max:dataMax+pad,
+      display:true,
+      min:habitIsTime(h)?Math.max(0,Math.floor(dataMin-pad)):0,
+      max:habitIsTime(h)?Math.ceil(dataMax+pad):Math.ceil(dataMax+pad),
       grid:{color:idx===0?GC:'transparent'},
       border:{color:'rgba(0,210,255,0.08)'},
-      ticks:{color,font:CF,maxTicksLimit:4,
-        callback:h.type==='time'
+      ticks:{color,font:CF,maxTicksLimit:5,
+        callback:habitIsTime(h)
           ?v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}
-          :v=>v+(h.unit?` ${h.unit}`:'')}
+          :v=>{const rounded=Math.round(v*10)/10;return rounded+(h.unit?` ${h.unit}`:'')}
+      }
     };
     return{
       label:h.name+(h.unit?` (${h.unit})`:''),
@@ -2084,9 +2095,13 @@ function renderHeatmap(){
       }
       const isFuture=d>td;
       const noteForDay=habitLog[d]?.[h.id]?.note||'';
-      const tooltipHtml=`<div class="tt-date">${formatDate(d)}</div>${done?`<div class="tt-val">${val&&h.unit?val+' '+h.unit:'✓ Done'}</div>`:'<div style="color:var(--text3)">Not logged</div>'}${noteForDay?`<div class="tt-note">"${noteForDay}"</div>`:''}`;
-      return`<div class="heatmap-cell" style="background:${isFuture?'transparent':bg};opacity:${isFuture?0.1:opacity};${done?`box-shadow:0 0 3px ${color}60`:''}"
-        onmouseenter="showTooltip(event,\`${tooltipHtml.replace(/`/g,"'")}\`)"
+      const ttDate=formatDate(d);
+      const ttVal=done?(val&&h.unit?val+' '+h.unit:'Done'):'Not logged';
+      const ttNote=noteForDay?noteForDay.replace(/"/g,'&quot;'):'';
+      return`<div class="heatmap-cell"
+        style="background:${isFuture?'transparent':bg};opacity:${isFuture?0.1:opacity};${done?`box-shadow:0 0 3px ${color}60`:''}"
+        data-date="${ttDate}" data-val="${ttVal}" data-done="${done?1:0}" data-note="${ttNote}"
+        onmouseenter="showHeatTip(event,this)"
         onmouseleave="hideTooltip()"></div>`;
     }).join('')}</div>`).join('');
 
@@ -2113,6 +2128,16 @@ function showTooltip(e,html){
   const tw=tooltipEl.offsetWidth,th=tooltipEl.offsetHeight;
   tooltipEl.style.left=Math.min(x,window.innerWidth-tw-8)+'px';
   tooltipEl.style.top=Math.max(8,y-th)+'px';
+}
+function showHeatTip(e,el){
+  const date=el.dataset.date||'';
+  const val=el.dataset.val||'';
+  const done=el.dataset.done==='1';
+  const note=el.dataset.note||'';
+  const html=`<div class="tt-date">${date}</div>`
+    +(done?`<div class="tt-val">${val}</div>`:`<div style="color:var(--text3)">Not logged</div>`)
+    +(note?`<div class="tt-note">"${note}"</div>`:'');
+  showTooltip(e,html);
 }
 function hideTooltip(){if(tooltipEl)tooltipEl.style.display='none';}
 
