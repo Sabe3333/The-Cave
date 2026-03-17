@@ -353,6 +353,21 @@ select.input{cursor:pointer;}
 .corr-bar{width:50px;height:3px;background:var(--text3);overflow:hidden;flex-shrink:0;}
 .corr-fill{height:100%;transition:width 0.5s ease;}
 
+/* PERSONAL RECORDS */
+.record-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.record-row:last-child{border-bottom:none;}
+.record-label{font-size:9px;letter-spacing:1px;color:var(--text2);}
+.record-val{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;}
+
+/* GOAL PREDICTIONS */
+.pred-row{padding:8px 0;border-bottom:1px solid var(--border);}
+.pred-row:last-child{border-bottom:none;}
+.pred-name{font-size:10px;color:var(--text);letter-spacing:1px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pred-status{font-size:9px;letter-spacing:1px;}
+.pred-on-track{color:var(--accent2);}
+.pred-behind{color:var(--red);}
+.pred-no-data{color:var(--text3);}
+
 @media(max-width:700px){.stats-top-row{grid-template-columns:1fr;}.momentum-card{min-width:unset;}}
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
 .chart-card{background:var(--panel);border:1px solid var(--border);padding:14px;backdrop-filter:blur(8px);clip-path:polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px);transition:border-color 0.25s,filter 0.25s;}
@@ -538,6 +553,18 @@ select.input{cursor:pointer;}
   <div class="stats-top-row">
     <div class="score-banner" id="scoreBanner"></div>
     <div class="momentum-card" id="momentumCard"></div>
+  </div>
+
+  <!-- PERSONAL RECORDS + GOAL PREDICTIONS -->
+  <div class="charts-grid" style="margin-bottom:10px;">
+    <div class="chart-card">
+      <div class="chart-title"><span class="chart-title-text">Personal Records</span></div>
+      <div id="personalRecords" style="margin-top:4px;"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="chart-title-text">Goal Predictions</span></div>
+      <div id="goalPredictions" style="margin-top:4px;"></div>
+    </div>
   </div>
 
   <!-- CATEGORY SCORES -->
@@ -1357,7 +1384,121 @@ function periodWindowLabel(p,o){
   if(p==='3months')return o===0?'Last 3mo':`${o*3}–${o*3+3}mo ago`;
   return'All time';
 }
-// ── STATS ─────────────────────────────────────────────────────
+// ── PERSONAL RECORDS ──────────────────────────────────────────
+function calcPersonalRecords(){
+  const td=today();
+  const cbH=habits.filter(habitIsCheckbox);
+
+  // Best single day completion %
+  let bestDayPct=0,bestDayDate='';
+  const allLoggedDates=[...new Set(Object.keys(habitLog))].sort();
+  allLoggedDates.forEach(d=>{
+    if(!cbH.length)return;
+    const pct=Math.round(cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length*100);
+    if(pct>bestDayPct){bestDayPct=pct;bestDayDate=d;}
+  });
+
+  // Longest ever streak per habit
+  let longestStreak=0,longestHabit='';
+  habits.forEach(h=>{
+    let cur=0,max=0;
+    allLoggedDates.forEach(d=>{
+      if(isHabitDone(h.id,d)){cur++;if(cur>max)max=cur;}
+      else cur=0;
+    });
+    if(max>longestStreak){longestStreak=max;longestHabit=h.name;}
+  });
+
+  // Best motivation week
+  let bestMotWeek=0;
+  const weeks=[];let cur=allLoggedDates[0];
+  if(cur){
+    while(cur<=td){
+      const wEnd=addDays(cur,6)<=td?addDays(cur,6):td;
+      const entries=journal.filter(j=>j.date>=cur&&j.date<=wEnd&&j.motivation);
+      if(entries.length){const avg=entries.reduce((s,j)=>s+j.motivation,0)/entries.length;if(avg>bestMotWeek)bestMotWeek=parseFloat(avg.toFixed(1));}
+      cur=addDays(cur,7);
+    }
+  }
+
+  // Best score week
+  let bestScore=0;
+  allLoggedDates.forEach((_,i,arr)=>{
+    if(i%7===0){
+      const wEnd=arr[Math.min(i+6,arr.length-1)];
+      const s=calcScore(arr[i],wEnd).overall;
+      if(s>bestScore)bestScore=s;
+    }
+  });
+
+  return{bestDayPct,bestDayDate,longestStreak,longestHabit,bestMotWeek,bestScore};
+}
+
+function renderPersonalRecords(){
+  const el=document.getElementById('personalRecords');
+  if(!el)return;
+  const r=calcPersonalRecords();
+  const records=[
+    {label:'Best single day',val:`${r.bestDayPct}%`,color:r.bestDayPct>=80?'var(--accent2)':r.bestDayPct>=50?'var(--warn)':'var(--text)'},
+    {label:'Longest ever streak',val:`${r.longestStreak}D`,sub:r.longestHabit,color:'var(--accent)'},
+    {label:'Best motivation week',val:`${r.bestMotWeek}/10`,color:r.bestMotWeek>=8?'var(--accent2)':r.bestMotWeek>=6?'var(--warn)':'var(--text)'},
+    {label:'Best score week',val:`${r.bestScore}`,color:r.bestScore>=70?'var(--accent2)':r.bestScore>=40?'var(--warn)':'var(--red)'},
+  ];
+  el.innerHTML=records.map(r=>`<div class="record-row">
+    <div><div class="record-label">${r.label}</div>${r.sub?`<div style="font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:1px;">${r.sub}</div>`:''}</div>
+    <div class="record-val" style="color:${r.color};text-shadow:0 0 12px ${r.color}40">${r.val}</div>
+  </div>`).join('');
+}
+
+// ── GOAL PREDICTIONS ──────────────────────────────────────────
+function renderGoalPredictions(){
+  const el=document.getElementById('goalPredictions');
+  if(!el)return;
+  const activeGoals=goals.filter(g=>g.progress<100);
+  if(!activeGoals.length){el.innerHTML='<div class="empty-state" style="padding:16px;"><div class="empty-icon" style="font-size:14px;">◎</div>No active goals</div>';return;}
+
+  el.innerHTML=activeGoals.map(g=>{
+    if(!g.deadline){
+      return`<div class="pred-row"><div class="pred-name">${g.name}</div><div class="pred-status pred-no-data">// No deadline set</div></div>`;
+    }
+    const daysLeft=Math.ceil((new Date(g.deadline+'T12:00:00')-new Date())/(1000*60*60*24));
+    const remaining=100-g.progress;
+
+    // Estimate weekly progress rate from history (last 30 days)
+    // Since we don't store progress history, estimate based on days elapsed vs current progress
+    const created=g.created_at?new Date(g.created_at):null;
+    const daysElapsed=created?Math.ceil((new Date()-created)/(1000*60*60*24)):30;
+    const weeklyRate=daysElapsed>0?(g.progress/daysElapsed)*7:0;
+
+    if(weeklyRate<0.5){
+      return`<div class="pred-row"><div class="pred-name">${g.name}</div><div class="pred-status pred-no-data">// Not enough progress data</div></div>`;
+    }
+
+    const weeksNeeded=remaining/weeklyRate;
+    const daysNeeded=Math.ceil(weeksNeeded*7);
+    const onTrack=daysNeeded<=daysLeft;
+    const diff=Math.abs(daysLeft-daysNeeded);
+
+    return`<div class="pred-row">
+      <div class="pred-name">${g.name}</div>
+      <div class="pred-status ${onTrack?'pred-on-track':'pred-behind'}">
+        ${onTrack
+          ?`✓ On track · ${daysLeft}d left · ~${daysNeeded}d needed`
+          :`✗ ${diff}d behind · need ${daysNeeded}d, have ${daysLeft}d`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 7-DAY ROLLING AVERAGE ─────────────────────────────────────
+function addRollingAverage(chart,data,labels){
+  const window=7;
+  const rolling=data.map((v,i)=>{
+    const slice=data.slice(Math.max(0,i-window+1),i+1).filter(x=>x>0);
+    return slice.length?parseFloat((slice.reduce((a,b)=>a+b,0)/slice.length).toFixed(1)):null;
+  });
+  return rolling;
+}
 function setPeriod(p,el){
   activePeriod=p;chartOffsets={score:0,habit:0,mot:0,journal:0};
   document.querySelectorAll('.period-switcher .btn-ghost').forEach(b=>b.classList.remove('active-filter'));
@@ -1537,6 +1678,8 @@ function renderStats(){
       </div>`;
     }).join('');
 
+  renderPersonalRecords();
+  renderGoalPredictions();
   renderScoreChart();
   renderConsistencyChart(start,end);
   renderDayOfWeekChart(start,end);
@@ -1585,13 +1728,18 @@ function renderScoreChart(){
   const grad=ctx.createLinearGradient(0,0,0,260);
   grad.addColorStop(0,'rgba(0,255,157,0.18)');grad.addColorStop(0.6,'rgba(255,184,0,0.05)');grad.addColorStop(1,'rgba(0,255,157,0)');
   const labels=buckets.map(b=>b.label);
+  const rolling=addRollingAverage(null,data,null);
   charts['chartScore']=new Chart(ctx,{type:'line',
     data:{labels,datasets:[
       // Main score line
       {data,borderColor:'#00ff9d',backgroundColor:grad,
        pointBackgroundColor:data.map(v=>v>=70?'#00ff9d':v>=40?'#ffb800':'#ff3d5a'),
        pointRadius:3,pointHoverRadius:5,tension:0.3,fill:true,spanGaps:true,
-       label:'Score',order:1},
+       label:'Score',order:2},
+      // 7-day rolling average
+      {data:rolling,borderColor:'rgba(123,97,255,0.75)',backgroundColor:'transparent',
+       pointRadius:0,tension:0.5,fill:false,spanGaps:true,
+       borderWidth:2,label:'7d avg',order:1},
       // Reference line at 70
       {data:Array(labels.length).fill(70),borderColor:'rgba(0,255,157,0.18)',
        borderWidth:1,borderDash:[5,5],pointRadius:0,fill:false,
