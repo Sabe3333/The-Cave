@@ -412,13 +412,22 @@ select.input{cursor:pointer;}
 .heatmap-months{display:flex;gap:2px;margin-bottom:3px;overflow-x:auto;}
 .heatmap-month-label{font-size:7px;color:var(--text3);letter-spacing:1px;flex-shrink:0;}
 
-/* HABIT NOTE */
-.habit-note-wrap{padding:4px 14px 8px 14px;background:rgba(0,0,0,0.15);}
-.habit-note-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text2);font-family:'DM Mono',monospace;font-size:11px;padding:4px 0;outline:none;transition:border-color 0.2s;letter-spacing:0.5px;}
-.habit-note-input:focus{border-bottom-color:var(--accent);color:var(--text);}
-.habit-note-input::placeholder{color:var(--text3);font-style:italic;}
-.habit-note-saved{font-size:9px;color:var(--text2);font-style:italic;padding:3px 0;font-family:'DM Mono',monospace;letter-spacing:0.5px;cursor:pointer;}
-.habit-note-saved:hover{color:var(--accent);}
+/* NOTE THREAD */
+.note-thread{background:rgba(0,0,0,0.18);border-top:1px solid var(--border);padding:8px 14px;}
+.note-thread-entry{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(0,210,255,0.05);}
+.note-thread-entry:last-child{border-bottom:none;}
+.note-thread-date{font-size:8px;letter-spacing:1px;color:var(--accent);flex-shrink:0;padding-top:1px;min-width:50px;}
+.note-thread-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);flex:1;line-height:1.5;}
+.note-thread-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;flex-shrink:0;padding:0 2px;transition:color 0.15s;}
+.note-thread-del:hover{color:var(--red);}
+.note-add-row{display:flex;gap:6px;margin-top:6px;align-items:center;}
+.note-add-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:3px 0;outline:none;transition:border-color 0.2s;}
+.note-add-input:focus{border-bottom-color:var(--accent);}
+.note-add-input::placeholder{color:var(--text3);font-style:italic;}
+.note-add-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;padding:3px 8px;cursor:pointer;clip-path:polygon(3px 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 3px);transition:all 0.15s;flex-shrink:0;}
+.note-add-btn:hover{border-color:var(--accent);color:var(--accent);}
+.thread-toggle{font-size:9px;color:var(--text3);letter-spacing:1px;cursor:pointer;padding:3px 14px 5px;display:block;transition:color 0.15s;background:none;border:none;text-align:left;}
+.thread-toggle:hover{color:var(--text2);}
 
 }
 .empty-state{text-align:center;padding:36px 20px;color:var(--text2);font-size:10px;letter-spacing:2px;}
@@ -834,6 +843,10 @@ function habitPrimaryType(h){
 }
 
 
+// ── NOTES STATE ──────────────────────────────────────────────
+let notes=[]; // all notes loaded from DB
+let expandedThreads=new Set(); // which habit/goal threads are open
+
 // ── DATE HELPERS ──────────────────────────────────────────────
 const today=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 const addDays=(ds,n)=>{const d=new Date(ds+'T12:00:00');d.setDate(d.getDate()+n);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -858,13 +871,14 @@ async function loadAll(){
   setSyncStatus('syncing');
   try{
     const cutoff=subDays(400);
-    const[hR,hlR,gR,jR]=await Promise.all([
+    const[hR,hlR,gR,jR,nR]=await Promise.all([
       sb.from('habits').select('*').order('id'),
       sb.from('habit_log').select('*').gte('date',cutoff),
       sb.from('goals').select('*').order('id'),
-      sb.from('journal').select('*').order('created_at',{ascending:false})
+      sb.from('journal').select('*').order('created_at',{ascending:false}),
+      sb.from('notes').select('*').order('created_at',{ascending:false})
     ]);
-    habits=hR.data||[];goals=gR.data||[];journal=jR.data||[];
+    habits=hR.data||[];goals=gR.data||[];journal=jR.data||[];notes=nR.data||[];
     habitLog={};
     for(const r of(hlR.data||[])){
       if(!habitLog[r.date])habitLog[r.date]={};
@@ -997,11 +1011,60 @@ async function toggleHabit(id){
 
 async function saveHabitNote(id,note){
   const td=today();
-  if(!habitLog[td]||!habitLog[td][id])return; // only save note if log entry exists
+  if(!habitLog[td]||!habitLog[td][id])return;
   setSyncStatus('syncing');
   await sb.from('habit_log').update({note}).eq('id',habitLog[td][id].id);
   habitLog[td][id].note=note;
   setSyncStatus('ok');
+}
+
+// ── NOTE THREADS ──────────────────────────────────────────────
+async function addNote(type,refId,inputEl){
+  const text=inputEl.value.trim();if(!text)return;
+  setSyncStatus('syncing');
+  const{data}=await sb.from('notes').insert({type,ref_id:refId,text}).select().single();
+  if(data)notes.unshift(data);
+  setSyncStatus('ok');
+  inputEl.value='';
+  render();
+  // Re-expand the thread after render
+  expandedThreads.add(`${type}-${refId}`);
+  render();
+}
+async function deleteNote(id){
+  if(!confirm('Delete this note?'))return;
+  setSyncStatus('syncing');
+  await sb.from('notes').delete().eq('id',id);
+  notes=notes.filter(n=>n.id!==id);
+  setSyncStatus('ok');render();
+}
+function toggleThread(type,refId){
+  const key=`${type}-${refId}`;
+  if(expandedThreads.has(key))expandedThreads.delete(key);
+  else expandedThreads.add(key);
+  render();
+}
+function renderThread(type,refId,accentColor){
+  const key=`${type}-${refId}`;
+  const open=expandedThreads.has(key);
+  const threadNotes=notes.filter(n=>n.type===type&&n.ref_id===refId);
+  const preview=threadNotes.length?`${threadNotes.length} note${threadNotes.length>1?'s':''}`:'+';
+  return`<button class="thread-toggle" onclick="toggleThread('${type}',${refId})">
+    <span style="color:${accentColor}">// </span>${open?'hide':'show'} notes${threadNotes.length?' ('+threadNotes.length+')':''}
+  </button>
+  ${open?`<div class="note-thread">
+    ${threadNotes.map(n=>`<div class="note-thread-entry">
+      <div class="note-thread-date">${new Date(n.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+      <div class="note-thread-text">${n.text}</div>
+      <button class="note-thread-del" onclick="deleteNote(${n.id})">×</button>
+    </div>`).join('')}
+    <div class="note-add-row">
+      <input class="note-add-input" type="text" placeholder="add a note..."
+        id="noteinput-${type}-${refId}"
+        onkeydown="if(event.key==='Enter')addNote('${type}',${refId},this)">
+      <button class="note-add-btn" onclick="addNote('${type}',${refId},document.getElementById('noteinput-${type}-${refId}'))">+ Add</button>
+    </div>
+  </div>`:''}`;
 }
 async function logHabitValue(id,value){
   const td=today();setSyncStatus('syncing');
@@ -1100,18 +1163,7 @@ function renderHabits(){
         const valDisplay=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):habitIsTime(h)&&val?val:habitIsRating(h)&&val?`${val}/10`:'';
         // Type label for meta
         const typeLabel=hasBoth?h.type.replace('checkbox,','').replace(',','+'):h.type!=='checkbox'?h.type.replace(',','+'):'';
-        // Note for today
-        const note=habitLog[td]&&habitLog[td][h.id]?habitLog[td][h.id].note||'':'';
-        const noteHtml=done
-          ?`<div class="habit-note-wrap">
-              ${note
-                ?`<div class="habit-note-saved" onclick="editHabitNote(${h.id})" title="Click to edit">// ${note}</div>`
-                :`<input class="habit-note-input" type="text" placeholder="add a note for today..."
-                    onblur="if(this.value.trim())saveHabitNote(${h.id},this.value.trim())"
-                    onkeydown="if(event.key==='Enter'&&this.value.trim()){saveHabitNote(${h.id},this.value.trim());this.blur()}">`
-              }
-            </div>`
-          :'';
+        const noteHtml=renderThread('habit',h.id,color);
         return`<div class="habit-item${done?' done':''}" style="border-left-color:${color}40;">
           <div class="habit-color-bar" style="background:${color};box-shadow:0 0 6px ${color};"></div>
           ${hasBoth?checkHtml:''}
@@ -1125,11 +1177,11 @@ function renderHabits(){
           <div class="habit-streak">${streak>0?`${streak}D`:'—'}</div>
           <button class="habit-delete" onclick="event.stopPropagation();deleteHabit(${h.id})">×</button>
         </div>
-        ${noteHtml}
         <div class="week-row-wrap">
           <div class="week-labels">${wkLabels}</div>
           <div class="week-bar">${wk}</div>
-        </div>`;
+        </div>
+        ${noteHtml}`;
       }).join('')}
     </div>`;
   }).join('');
@@ -1167,6 +1219,7 @@ function renderGoals(){
     const dl=g.deadline?`<span class="goal-deadline">ETA ${formatDate(g.deadline)}</span>`:'';
     const daysLeft=g.deadline?Math.ceil((new Date(g.deadline+'T12:00:00')-new Date())/(1000*60*60*24)):null;
     const urgency=daysLeft!==null&&daysLeft<=7&&!done?`<span style="font-size:9px;color:var(--red);letter-spacing:1px;"> · ${daysLeft}D LEFT</span>`:'';
+    const goalColor=done?'var(--accent2)':'var(--warn)';
     return`<div class="goal-item${done?' completed':''}">
       <div class="goal-header">
         <div><div class="goal-name">${g.name}${urgency}</div>${dl?`<div style="margin-top:2px">${dl}</div>`:''}</div>
@@ -1183,6 +1236,7 @@ function renderGoals(){
           <button class="prog-btn" onclick="updateGoalProgress(${g.id},10)" title="+10%">+</button>
         </div>
       </div>
+      ${renderThread('goal',g.id,goalColor)}
     </div>`;
   }).join('');
   if(showCompleted&&completed.length)el.innerHTML+=`<div style="text-align:center;padding:8px;font-size:9px;letter-spacing:3px;color:var(--text2);cursor:pointer;" onclick="showCompleted=false;renderGoals()">// HIDE COMPLETED</div>`;
@@ -1492,10 +1546,12 @@ function renderGoalPredictions(){
 
 // ── 7-DAY ROLLING AVERAGE ─────────────────────────────────────
 function addRollingAverage(chart,data,labels){
-  const window=7;
+  const WIN=7;
   const rolling=data.map((v,i)=>{
-    const slice=data.slice(Math.max(0,i-window+1),i+1).filter(x=>x>0);
-    return slice.length?parseFloat((slice.reduce((a,b)=>a+b,0)/slice.length).toFixed(1)):null;
+    const slice=data.slice(Math.max(0,i-WIN+1),i+1).filter(x=>x>0);
+    if(!slice.length)return null;
+    const avg=slice.reduce((a,b)=>a+b,0)/slice.length;
+    return Math.round(avg*10)/10; // clean 1dp, no floating point garbage
   });
   return rolling;
 }
@@ -1705,23 +1761,22 @@ function baseScales(yMax,pct){return{
 };}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderColor:'rgba(0,210,255,0.25)',borderWidth:1,titleColor:TC,bodyColor:'#c8e8f0',titleFont:CF,bodyFont:CF};}
+// Single smooth zoom config used by all charts
+// limits are set per-chart via Chart.js options.plugins.zoom.limits
 const zoomPlugin={
   zoom:{
-    wheel:{enabled:true,speed:0.15},
+    wheel:{enabled:true,speed:0.12,modifierKey:null},
     pinch:{enabled:true},
-    mode:'x'
+    mode:'x',
+    scaleMode:'x'
   },
   pan:{
     enabled:true,
     mode:'x',
-    speed:10,
-    threshold:3
+    speed:12,
+    threshold:2,
+    modifierKey:null
   }
-};
-// Zoom plugin with no x limits so you can always zoom all the way out
-const zoomPluginFull={
-  zoom:{wheel:{enabled:true,speed:0.15},pinch:{enabled:true},mode:'x'},
-  pan:{enabled:true,mode:'x',speed:10,threshold:3}
 };
 
 function renderScoreChart(){
@@ -1755,12 +1810,12 @@ function renderScoreChart(){
        label:'',order:3}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},
+      plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12,filter:item=>item.label&&item.label!==''}},
         tooltip:{...tooltipDefaults(),callbacks:{
-          label:c=>c.datasetIndex===0?`Score: ${c.raw}`:null,
+          label:c=>c.datasetIndex===0?`Score: ${c.raw}`:c.datasetIndex===1&&c.raw!=null?`7d avg: ${c.raw}`:null,
           title:items=>items[0]?.datasetIndex===0?items[0].label:null
         }},
-        zoom:zoomPlugin},
+        zoom:{...zoomPlugin,limits:{x:{minRange:2}}}},
       scales:{x:baseScales(100,false).x,
         y:{...baseScales(100,false).y,min:0,max:100,
           ticks:{color:TC,font:CF,
@@ -1911,7 +1966,7 @@ function renderHabitChart(){
       borderColor:data.map(v=>v>=70?'#00ff9d':v>=40?'#00d2ff':'#ff3d5a'),
       borderWidth:1,borderRadius:1}]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% done`}},zoom:zoomPlugin},
+      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% done`}},zoom:{...zoomPlugin,limits:{x:{minRange:2}}}},
       scales:baseScales(100,true)}});
 }
 
@@ -1935,7 +1990,7 @@ function renderMotChart(){
     }]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.raw===null?'No entry':`Motivation: ${c.raw}/10`}},zoom:zoomPlugin},
+        tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.raw===null?'No entry':`Motivation: ${c.raw}/10`}},zoom:{...zoomPlugin,limits:{x:{minRange:2}}}},
       scales:{x:baseScales(10,false).x,y:{min:0,max:10,ticks:{color:TC,font:CF,stepSize:2},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
 }
 
@@ -2048,7 +2103,7 @@ function renderCompareChart(){
       plugins:{
         legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12}},
         tooltip:tooltipDefaults(),
-        zoom:zoomPlugin
+        zoom:{...zoomPlugin,limits:{x:{minRange:2}}}
       },
       scales
     }
@@ -2144,16 +2199,7 @@ function hideTooltip(){if(tooltipEl)tooltipEl.style.display='none';}
 // ── RENDER ────────────────────────────────────────────────────
 function render(){renderDashboard();renderHabits();renderGoals();renderJournal();}
 
-function editHabitNote(id){
-  // Replace the saved note div with an input
-  const wrap=event.target.closest('.habit-note-wrap');
-  if(!wrap)return;
-  const note=habitLog[today()]?.[id]?.note||'';
-  wrap.innerHTML=`<input class="habit-note-input" type="text" placeholder="add a note..." value="${note.replace(/"/g,'&quot;')}" autofocus
-    onblur="saveHabitNote(${id},this.value.trim());render()"
-    onkeydown="if(event.key==='Enter'){saveHabitNote(${id},this.value.trim());render()}">`;
-  wrap.querySelector('input').focus();
-}
+
 
 
 
