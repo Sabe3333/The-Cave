@@ -2209,11 +2209,15 @@ function applySmooth(chartId, mode='x'){
   function getLimits(){return chartLimits[chartId]||{};}
 
   function clampScale(sc,newMin,newMax,floorMin,ceilMax){
-    // Prevent going below floor or above ceiling
     const range=newMax-newMin;
-    if(floorMin!==undefined&&newMin<floorMin){newMin=floorMin;newMax=floorMin+range;}
-    if(ceilMax!==undefined&&newMax>ceilMax){newMax=ceilMax;newMin=ceilMax-range;}
-    // Prevent inverting
+    if(range<=0)return;
+    // Clamp min
+    if(floorMin!==undefined&&newMin<floorMin){newMin=floorMin;newMax=newMin+range;}
+    // Clamp max
+    if(ceilMax!==undefined&&newMax>ceilMax){newMax=ceilMax;newMin=newMax-range;}
+    // Second pass — after adjusting max, min might have gone below floor again
+    if(floorMin!==undefined&&newMin<floorMin)newMin=floorMin;
+    if(ceilMax!==undefined&&newMax>ceilMax)newMax=ceilMax;
     if(newMin>=newMax)return;
     sc.options.min=newMin;
     sc.options.max=newMax;
@@ -2418,22 +2422,21 @@ function renderConsistencyChart(fromDate,toDate){
 function renderDayOfWeekChart(fromDate,toDate){
   destroyChart('chartDayOfWeek');
   const data=calcDayOfWeek(fromDate,toDate);
-  if(!data){
-    const ctx=document.getElementById('chartDayOfWeek')?.getContext('2d');
-    if(ctx){setTimeout(()=>{ctx.fillStyle='rgba(0,210,255,0.15)';ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('// Add habits to see day breakdown',ctx.canvas.width/2,ctx.canvas.height/2);},30);}
+  const ctx=document.getElementById('chartDayOfWeek')?.getContext('2d');
+  if(!data||!data.length||!ctx){
+    if(ctx){setTimeout(()=>{ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.fillStyle='rgba(0,210,255,0.15)';ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('// Add habits to see day breakdown',ctx.canvas.width/2,ctx.canvas.height/2);},30);}
     return;
   }
-  // Store for detail view
   window._dowData={data,fromDate,toDate};
-  const ctx=document.getElementById('chartDayOfWeek').getContext('2d');
   const rates=data.map(d=>d.rate??0);
-  const best=Math.max(...rates);
-  const worst=Math.min(...rates.filter(r=>r>0));
+  const validRates=rates.filter(r=>r>0);
+  const best=validRates.length?Math.max(...validRates):0;
+  const worst=validRates.length?Math.min(...validRates):0;
   charts['chartDayOfWeek']=new Chart(ctx,{type:'bar',
     data:{labels:data.map(d=>d.label),datasets:[{
       data:rates,
-      backgroundColor:rates.map(r=>r===best?'rgba(0,255,157,0.65)':r===worst&&r>0?'rgba(255,61,90,0.4)':r>=70?'rgba(0,210,255,0.35)':r>=40?'rgba(255,184,0,0.3)':'rgba(255,61,90,0.15)'),
-      borderColor:rates.map(r=>r===best?'#00ff9d':r===worst&&r>0?'#ff3d5a':r>=70?'#00d2ff':r>=40?'#ffb800':'#ff3d5a'),
+      backgroundColor:rates.map(r=>r===best&&r>0?'rgba(0,255,157,0.65)':r===worst&&r>0&&r!==best?'rgba(255,61,90,0.4)':r>=70?'rgba(0,210,255,0.35)':r>=40?'rgba(255,184,0,0.3)':r>0?'rgba(255,61,90,0.15)':'rgba(30,58,74,0.3)'),
+      borderColor:rates.map(r=>r===best&&r>0?'#00ff9d':r===worst&&r>0&&r!==best?'#ff3d5a':r>=70?'#00d2ff':r>=40?'#ffb800':r>0?'#ff3d5a':'rgba(0,210,255,0.1)'),
       borderWidth:1,borderRadius:2
     }]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -3079,7 +3082,10 @@ function selectGoalTime(id){selectedGoalTimeId=id;renderGoalTimeSelector();rende
 function renderGoalTimeChart(){
   destroyChart('chartGoalTime');
   const canvas=document.getElementById('chartGoalTime');
-  if(!canvas||!selectedGoalTimeId)return;
+  if(!canvas)return;
+  // Auto-select first goal if none selected
+  if(!selectedGoalTimeId&&goals.length)selectedGoalTimeId=goals[0].id;
+  if(!selectedGoalTimeId)return;
   const g=goals.find(g=>g.id===selectedGoalTimeId);
   if(!g)return;
   const ctx=canvas.getContext('2d');
@@ -3092,12 +3098,13 @@ function renderGoalTimeChart(){
   if(!lastLog||lastLog.progress!==g.progress){
     logs.push({goal_id:g.id,progress:g.progress,logged_at:new Date().toISOString()});
   }
+  // logs always has at least the current progress point
   if(!logs.length){
     setTimeout(()=>{
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='rgba(255,184,0,0.3)';ctx.font="10px 'Share Tech Mono'";
       ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(`// Update goal progress to build history`,canvas.width/2,canvas.height/2);
+      ctx.fillText('// No goals found',canvas.width/2,canvas.height/2);
     },30);
     return;
   }
