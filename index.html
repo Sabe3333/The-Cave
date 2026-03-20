@@ -582,6 +582,19 @@ select.input{cursor:pointer;}
 .ai-send:hover{opacity:0.85;}
 .ai-send:disabled{opacity:0.35;cursor:not-allowed;}
 @media(max-width:480px){#aiPanel{width:calc(100vw - 16px);right:8px;}#aiBtnWrap{right:16px;bottom:16px;}}
+
+/* EXPANDABLE HABIT LOG */
+.habit-item{cursor:pointer;}
+.habit-log-panel{overflow:hidden;max-height:0;transition:max-height 0.25s ease,padding 0.25s ease;background:rgba(0,0,0,0.2);border-left:2px solid transparent;padding:0 14px;}
+.habit-log-panel.open{max-height:160px;padding:10px 14px;}
+.log-panel-inner{display:flex;flex-wrap:wrap;gap:16px;align-items:center;}
+.log-field{display:flex;flex-direction:column;gap:4px;}
+.log-field-label{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;}
+.log-field-controls{display:flex;align-items:center;gap:5px;}
+
+/* EXPORT BUTTON */
+.export-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:5px 12px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);transition:all 0.15s;}
+.export-btn:hover{border-color:var(--accent2);color:var(--accent2);}
 </style>
 </head>
 <body>
@@ -668,7 +681,10 @@ select.input{cursor:pointer;}
 <div class="section" id="section-habits">
   <div class="section-header">
     <div class="section-title"><span>//</span> Habits</div>
-    <button class="btn" onclick="openModal('habitModal')"><span>+ New Habit</span></button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="export-btn" onclick="exportCSV()">↓ Export CSV</button>
+      <button class="btn" onclick="openModal('habitModal')"><span>+ New Habit</span></button>
+    </div>
   </div>
   <div id="habitsList"><div class="loading"><div class="spinner"></div>Loading...</div></div>
 </div>
@@ -1067,6 +1083,7 @@ let sparklineHabitId=null;
 let sparklineMetrics=new Set();
 let selectedGoalTimeId=null;
 let streakDetailMode=false;
+let expandedHabits=new Set(); // which habit ids have log panel open
 
 const PRESETS=[
   {name:'Body',color:'#00ff9d'},{name:'Mind',color:'#7b61ff'},
@@ -1401,46 +1418,70 @@ function renderHabits(){
           const label=['S','M','T','W','T','F','S'][dow];
           return`<div class="week-label${d===td?' today-label':''}">${label}</div>`;
         }).join('');
-        // Build log controls based on type(s)
-        let logHtml='';
+        // Build compact summary for collapsed state
+        const valDisplay=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):habitIsTime(h)&&val?val:habitIsRating(h)&&val?`${val}/10`:'';
+        const typeLabel=hasBoth?h.type.replace('checkbox,','').replace(',','+'):h.type!=='checkbox'?h.type.replace(',','+'):'';
+        const noteHtml=renderThread('habit',h.id,color);
+        const isExpanded=expandedHabits.has(h.id);
+
+        // Build expanded log panel content
+        let expandedContent='';
         if(habitIsNumeric(h)||habitIsRating(h)){
           const cur=val?parseFloat(val):0;
           const maxV=habitIsRating(h)?10:null;
-          logHtml=`<div class="log-inline" onclick="event.stopPropagation()">
-            <button class="log-btn" onclick="logHabitValue(${h.id},Math.max(0,${cur}-1))">−</button>
-            <input class="log-input-sm" type="number" value="${cur||0}" min="0"${maxV?` max="${maxV}"`:''}
-              onchange="logHabitValue(${h.id},parseFloat(this.value)||0)">
-            <span class="log-unit">${h.unit||''}</span>
-            <button class="log-btn" onclick="logHabitValue(${h.id},${cur}+1)">+</button>
-          </div>`;
-        }else if(habitIsTime(h)){
-          logHtml=`<div class="log-inline" onclick="event.stopPropagation()">
-            <input class="log-input-sm" type="time" value="${val||''}" style="width:80px;"
-              onchange="logHabitValue(${h.id},this.value)">
+          expandedContent+=`<div class="log-field">
+            <div class="log-field-label">${h.unit||'Value'}${h.target?' (target: '+h.target+')':''}</div>
+            <div class="log-field-controls">
+              <button class="log-btn" onclick="event.stopPropagation();logHabitValue(${h.id},Math.max(0,${cur}-1))">−</button>
+              <input class="log-input-sm" type="number" value="${cur||0}" min="0"${maxV?` max="${maxV}"`:''}
+                onclick="event.stopPropagation()"
+                onchange="event.stopPropagation();logHabitValue(${h.id},parseFloat(this.value)||0)">
+              <button class="log-btn" onclick="event.stopPropagation();logHabitValue(${h.id},${cur}+1)">+</button>
+            </div>
           </div>`;
         }
-        const checkHtml=habitIsCheckbox(h)?`<div class="habit-check${done?' done-check':''}"
-          style="${done?`background:${color};border-color:${color};`:`border-color:${color}40;`}"
-          onclick="toggleHabit(${h.id})"><span class="checkmark" style="display:${done?'block':'none'}">✓</span></div>`:'';
-        if(!habitIsNumeric(h)&&!habitIsTime(h)&&!habitIsRating(h)){logHtml=checkHtml;}
-        const hasBoth=habitIsCheckbox(h)&&(habitIsNumeric(h)||habitIsTime(h)||habitIsRating(h));
-        const valDisplay=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):habitIsTime(h)&&val?val:habitIsRating(h)&&val?`${val}/10`:'';
-        // Type label for meta
-        const typeLabel=hasBoth?h.type.replace('checkbox,','').replace(',','+'):h.type!=='checkbox'?h.type.replace(',','+'):'';
-        const noteHtml=renderThread('habit',h.id,color);
-        return`<div class="habit-item${done?' done':''}" style="border-left-color:${color}40;">
+        if(habitIsTime(h)){
+          expandedContent+=`<div class="log-field">
+            <div class="log-field-label">${h.unit||'Time'}</div>
+            <div class="log-field-controls">
+              <input class="log-input-sm" type="time" value="${val||''}" style="width:84px;"
+                onclick="event.stopPropagation()"
+                onchange="event.stopPropagation();logHabitValue(${h.id},this.value)">
+            </div>
+          </div>`;
+        }
+        if(habitIsCheckbox(h)&&hasBoth){
+          expandedContent+=`<div class="log-field">
+            <div class="log-field-label">Done</div>
+            <div class="log-field-controls">
+              <div class="habit-check${done?' done-check':''}" style="${done?`background:${color};border-color:${color};`:`border-color:${color}40;`}"
+                onclick="event.stopPropagation();toggleHabit(${h.id})">
+                <span class="checkmark" style="display:${done?'block':'none'}">✓</span>
+              </div>
+            </div>
+          </div>`;
+        }
+
+        return`<div class="habit-item${done?' done':''}" style="border-left-color:${color}40;"
+          onclick="toggleHabitExpand(${h.id})">
           <div class="habit-color-bar" style="background:${color};box-shadow:0 0 6px ${color};"></div>
-          ${hasBoth?checkHtml:''}
-          ${!hasBoth?logHtml:''}
+          ${!hasBoth&&habitIsCheckbox(h)?`<div class="habit-check${done?' done-check':''}"
+            style="${done?`background:${color};border-color:${color};`:`border-color:${color}40;`}"
+            onclick="event.stopPropagation();toggleHabit(${h.id})">
+            <span class="checkmark" style="display:${done?'block':'none'}">✓</span>
+          </div>`:''}
           <div class="habit-info">
             <div class="habit-name">${h.name}</div>
             <div class="habit-meta">${cat}${typeLabel?' · '+typeLabel:''}</div>
           </div>
-          ${hasBoth?logHtml:''}
           ${valDisplay?`<div class="log-val-display" style="color:${color}">${valDisplay}</div>`:''}
           <div class="habit-streak">${streak>0?`${streak}D`:'—'}</div>
+          <span style="font-size:10px;color:${isExpanded?color:'var(--text3)'};margin-left:4px;transition:transform 0.2s;display:inline-block;transform:rotate(${isExpanded?'90':'0'}deg)">›</span>
           <button class="edit-btn" onclick="event.stopPropagation();openEditHabit(${h.id})" style="margin-right:2px;">✎</button>
           <button class="habit-delete" onclick="event.stopPropagation();deleteHabit(${h.id})">×</button>
+        </div>
+        <div class="habit-log-panel${isExpanded?' open':''}" style="border-left-color:${color};">
+          <div class="log-panel-inner">${expandedContent}</div>
         </div>
         <div class="week-row-wrap">
           <div class="week-labels">${wkLabels}</div>
@@ -1778,10 +1819,10 @@ function scoreWakeTime(h,val){
 
 function calcScore(fromDate,toDate){
   const days=getDaysInRange(fromDate,toDate);
-  if(!days.length)return{overall:0,habitScore:0,motScore:50,goalScore:0,motHasData:false};
+  if(!days.length)return{overall:0,habitScore:0,motScore:50,goalScore:50,motHasData:false};
 
-  // Habit score: average of all habit day scores
-  let habitScore=0;
+  // Habit score: average of all habit day scores (65% weight — most important)
+  let habitScore=50;
   if(habits.length){
     const dayScores=days.map(d=>{
       const scores=habits.map(h=>scoreHabitDay(h,d));
@@ -1790,10 +1831,18 @@ function calcScore(fromDate,toDate){
     habitScore=dayScores.reduce((a,b)=>a+b,0)/dayScores.length;
   }
 
+  // Motivation: neutral 50 if no entries — don't punish for not journalling
   const motE=journal.filter(j=>j.date>=fromDate&&j.date<=toDate&&j.motivation);
   const motScore=motE.length?(motE.reduce((s,j)=>s+j.motivation,0)/motE.length)*10:50;
-  const goalScore=goals.length?goals.reduce((s,g)=>s+g.progress,0)/goals.length:50;
-  const overall=Math.round(habitScore*0.6+motScore*0.2+goalScore*0.2);
+
+  // Goal score: only count active (incomplete) goals, completed = neutral 100
+  const activeGoals=goals.filter(g=>g.progress<100);
+  const goalScore=activeGoals.length
+    ?Math.round(activeGoals.reduce((s,g)=>s+g.progress,0)/activeGoals.length)
+    :goals.length?100:50;
+
+  // Weights: habits 65%, motivation 20%, goals 15%
+  const overall=Math.round(habitScore*0.65+motScore*0.2+goalScore*0.15);
   return{overall,habitScore:Math.round(habitScore),motScore:Math.round(motScore),goalScore:Math.round(goalScore),motHasData:motE.length>0};
 }
 
@@ -3260,6 +3309,53 @@ async function saveEditJournal(){
   const j=journal.find(j=>j.id===id);
   if(j){j.text=text;j.motivation=motivation;}
   setSyncStatus('ok');closeModal('editJournalModal');render();
+}
+
+// ── HABIT EXPAND ─────────────────────────────────────────────
+function toggleHabitExpand(id){
+  if(expandedHabits.has(id))expandedHabits.delete(id);
+  else expandedHabits.add(id);
+  renderHabits();
+}
+
+// ── EXPORT CSV ────────────────────────────────────────────────
+function exportCSV(){
+  const rows=[['Date','Habit','Category','Type','Value','Unit','Score%','Done']];
+  const allDates=[...new Set(Object.keys(habitLog))].sort();
+  allDates.forEach(date=>{
+    habits.forEach(h=>{
+      const log=habitLog[date]?.[h.id];
+      const val=log?.value||'';
+      const done=!!log;
+      const score=scoreHabitDay(h,date);
+      rows.push([
+        date,
+        `"${h.name.replace(/"/g,'""')}"`,
+        h.category||'General',
+        h.type,
+        val,
+        h.unit||'',
+        score,
+        done?1:0
+      ]);
+    });
+  });
+  // Add journal
+  rows.push([]);
+  rows.push(['--- JOURNAL ---']);
+  rows.push(['Date','Motivation','Entry']);
+  journal.forEach(j=>{
+    rows.push([j.date,j.motivation||'',`"${(j.text||'').replace(/"/g,'""').replace(/\n/g,' ')}"`]);
+  });
+
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`cave-data-${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── RENDER ────────────────────────────────────────────────────
