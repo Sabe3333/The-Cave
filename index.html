@@ -2227,14 +2227,14 @@ function applySmooth(chartId, mode='x'){
       const range=xScale.max-xScale.min;
       const shift=dx*(range/ch.width);
       clampScale(xScale,xScale.min-shift,xScale.max-shift,lim.xMin,lim.xMax);
-    }else if(xScale&&xScale.type==='category'&&(mode==='x'||mode==='xy')){
+    }else if(xScale&&(xScale.type==='category'||(!xScale.type&&xScale.ticks?.length))&&(mode==='x'||mode==='xy')){
       // Categorical x: pan by shifting visible range
-      const total=xScale.ticks.length||1;
-      const visible=xScale.max-xScale.min;
+      const total=(xScale.ticks?.length||xScale.max)||10;
+      const visible=(xScale.max-xScale.min)||total;
       const shift=dx/ch.width*visible;
       const newMin=Math.max(0,xScale.min-shift);
-      const newMax=Math.min(total-1,xScale.max-shift);
-      if(newMax-newMin>0.5){xScale.options.min=newMin;xScale.options.max=newMax;}
+      const newMax=Math.min(total-1,newMin+visible);
+      if(newMax>newMin){xScale.options.min=newMin;xScale.options.max=newMax;}
     }
     // Y axes
     if(mode==='xy'||mode==='y'){
@@ -2604,10 +2604,13 @@ function renderGoalChart(){
         borderColor:goals.map(g=>g.progress>=100?'#00ff9d':g.progress>=70?'#00d2ff':'#ffb800'),
         borderWidth:1,borderRadius:1}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% complete`}}},
-      scales:{x:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>Number.isInteger(v)?v+'%':''},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
-              y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
-  setTimeout(()=>{applySmooth('chartGoal','x');setChartLimits('chartGoal',{yMin:0,yMax:105});},50);
+      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${Math.round(c.raw)}% complete`}}},
+      scales:{
+        x:{type:'linear',min:0,max:100,ticks:{color:TC,font:CF,callback:v=>Number.isInteger(v)?v+'%':''},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
+        y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}
+      }}});
+  // Goal bar: x is percentage 0-100, don't allow panning beyond that
+  setTimeout(()=>{applySmooth('chartGoal','x');setChartLimits('chartGoal',{xMin:0,xMax:100,yMin:undefined});},50);
 }
 
 // ── COMPARE CHART ─────────────────────────────────────────────
@@ -2648,68 +2651,80 @@ function renderCompareChart(){
     return;
   }
   const buckets=buildBuckets(activePeriod,0);
-  // Axis positions: alternate left/right for up to 5
-  // 0=left, 1=right, 2=left(offset), 3=right(offset), 4=left(offset2)
+  const labels=buckets.map(b=>b.label);
   const axisPositions=['left','right','left','right','left'];
-  const axisOffsets=[0,0,1,1,2];
-  const scales={x:baseScales(0,false).x};
+  // Use numeric x axis so applySmooth can pan/zoom it properly
+  const scales={
+    x:{
+      type:'linear',
+      min:0,max:labels.length-1,
+      ticks:{color:TC,font:CF,maxTicksLimit:10,
+        callback:(v)=>{const i=Math.round(v);return(i>=0&&i<labels.length&&Number.isInteger(v))?labels[i]:'';}
+      },
+      grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}
+    }
+  };
 
   const datasets=compareSelected.map((id,idx)=>{
     const h=habits.find(h=>h.id===id);if(!h)return null;
     const color=h.color||getCatColor(h.category||'General');
     const axisId=`y${idx}`;
-    const data=buckets.map(b=>{
+    // Build data as {x,y} points with numeric x index
+    const data=buckets.map((b,i)=>{
       const vals=b.days.map(d=>getHabitValue(id,d)).filter(v=>v!==null);
-      if(!vals.length)return 0;
+      if(!vals.length)return{x:i,y:null};
       if(habitIsTime(h)){
         const mins=vals.map(v=>{const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});
-        return Math.round(mins.reduce((a,b)=>a+b,0)/mins.length);
+        return{x:i,y:Math.round(mins.reduce((a,b)=>a+b,0)/mins.length)};
       }
-      // Round to 1 decimal, no floating point garbage
       const avg=vals.reduce((a,b)=>a+parseFloat(b),0)/vals.length;
-      return Math.round(avg*10)/10;
+      return{x:i,y:Math.round(avg*10)/10};
     });
-    const nonZero=data.filter(v=>v>0);
-    const dataMax=nonZero.length?Math.max(...nonZero):10;
-    const dataMin=nonZero.length?Math.min(...nonZero):0;
+    const nonNull=data.map(d=>d.y).filter(v=>v!==null&&v>0);
+    const dataMax=nonNull.length?Math.max(...nonNull):10;
+    const dataMin=nonNull.length?Math.min(...nonNull):0;
     const pad=Math.max((dataMax-dataMin)*0.15,dataMax*0.1,0.5);
-    const pos=axisPositions[idx];
     scales[axisId]={
-      position:pos,
+      position:axisPositions[idx],
       display:true,
-      min:habitIsTime(h)?Math.max(0,Math.floor(dataMin-pad)):0,
-      max:habitIsTime(h)?Math.ceil(dataMax+pad):Math.ceil(dataMax+pad),
+      min:Math.max(0,habitIsTime(h)?Math.floor(dataMin-pad):0),
+      max:Math.ceil(dataMax+pad),
       grid:{color:idx===0?GC:'transparent'},
       border:{color:'rgba(0,210,255,0.08)'},
       ticks:{color,font:CF,maxTicksLimit:5,
         callback:habitIsTime(h)
           ?v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}
-          :v=>{const rounded=Math.round(v*10)/10;return rounded+(h.unit?` ${h.unit}`:'')}
+          :v=>{const r=Math.round(v*10)/10;return Number.isInteger(r*10)?r+(h.unit?' '+h.unit:''):'';}
       }
     };
     return{
-      label:h.name+(h.unit?` (${h.unit})`:''),
+      label:h.name+(h.unit?' ('+h.unit+')':''),
       data,borderColor:color,
       backgroundColor:`rgba(${hexToRgb(color)},0.06)`,
       pointBackgroundColor:color,pointRadius:3,pointHoverRadius:6,
-      tension:0.3,fill:false,spanGaps:true,yAxisID:axisId,
+      tension:0.3,fill:false,spanGaps:true,showLine:true,yAxisID:axisId,
       borderWidth:idx===0?2:1.5
     };
   }).filter(Boolean);
 
-  charts['chartCompare']=new Chart(ctx,{type:'line',
-    data:{labels:buckets.map(b=>b.label),datasets},
+  charts['chartCompare']=new Chart(ctx,{type:'scatter',
+    data:{datasets},
     options:{responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12}},
-        tooltip:tooltipDefaults(),
+        tooltip:{...tooltipDefaults(),callbacks:{
+          title:items=>{const i=Math.round(items[0]?.parsed?.x);return(i>=0&&i<labels.length)?labels[i]:'';}
+        }},
         zoom:makeZoom('xy')
       },
       scales
     }
   });
-  setTimeout(()=>{applySmooth('chartCompare','xy');setChartLimits('chartCompare',{yMin:0});},50);
+  setTimeout(()=>{
+    applySmooth('chartCompare','xy');
+    setChartLimits('chartCompare',{xMin:0,xMax:labels.length-1,yMin:0});
+  },50);
 }
 
 // ── YEAR HEATMAP ──────────────────────────────────────────────
@@ -3068,17 +3083,25 @@ function renderGoalTimeChart(){
   const g=goals.find(g=>g.id===selectedGoalTimeId);
   if(!g)return;
   const ctx=canvas.getContext('2d');
-  const logs=goalLog.filter(l=>l.goal_id===g.id).sort((a,b)=>a.logged_at.localeCompare(b.logged_at));
-  if(logs.length<2){
+  // Always include current progress as latest data point
+  const rawLogs=goalLog.filter(l=>l.goal_id===g.id).sort((a,b)=>a.logged_at.localeCompare(b.logged_at));
+  // Add current state if not already logged today
+  const todayStr=today();
+  const lastLog=rawLogs[rawLogs.length-1];
+  const logs=[...rawLogs];
+  if(!lastLog||lastLog.progress!==g.progress){
+    logs.push({goal_id:g.id,progress:g.progress,logged_at:new Date().toISOString()});
+  }
+  if(!logs.length){
     setTimeout(()=>{
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='rgba(255,184,0,0.3)';ctx.font="10px 'Share Tech Mono'";
       ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(`// ${g.name}: ${g.progress}% — log more updates to see trend`,canvas.width/2,canvas.height/2);
+      ctx.fillText(`// Update goal progress to build history`,canvas.width/2,canvas.height/2);
     },30);
     return;
   }
-  const labels=logs.map(l=>new Date(l.logged_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const labels=logs.map(l=>new Date(l.logged_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:logs.length>5?undefined:'numeric',minute:logs.length>5?undefined:'2-digit'}));
   const data=logs.map(l=>l.progress);
   const grad=ctx.createLinearGradient(0,0,0,260);
   grad.addColorStop(0,'rgba(255,184,0,0.18)');grad.addColorStop(1,'rgba(255,184,0,0)');
