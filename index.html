@@ -1258,6 +1258,9 @@ async function toggleHabit(id){
   }
   setSyncStatus('ok');
   render();
+  // Update today score live
+  const td2=today();const sc2=calcScore(td2,td2).overall;
+  const sn1=document.getElementById('sn1');if(sn1)sn1.innerHTML=sc2;
   // Flash the habit row after render
   setTimeout(()=>{
     const items=document.querySelectorAll('.habit-item');
@@ -2181,29 +2184,145 @@ function baseScales(yMax,pct){return{
 };}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderColor:'rgba(0,210,255,0.25)',borderWidth:1,titleColor:TC,bodyColor:'#c8e8f0',titleFont:CF,bodyFont:CF};}
-// Trading-chart feel: smooth, sensitive, no page scroll hijack
-// Each chart gets its own config via makeZoom(mode)
+// ── SMOOTH CHART INTERACTION (trading-chart feel) ────────────
+// Custom wheel+drag handler bypasses the clunky zoom plugin
+// for smooth inertia pan and precise incremental zoom
+
+const chartInteract={};  // stores interaction state per canvas id
+
 function makeZoom(mode='x'){
-  return {
-    zoom:{
-      wheel:{enabled:true,speed:0.05},  // very gentle per-tick
-      pinch:{enabled:true},
-      mode:mode
-    },
-    pan:{
-      enabled:true,
-      mode:mode,
-      speed:1,        // 1:1 pixel tracking
-      threshold:1     // respond immediately
-    }
+  // Still used for plugin registration but we override with custom handlers
+  return{
+    zoom:{wheel:{enabled:true,speed:0.04},pinch:{enabled:true},mode:mode},
+    pan:{enabled:true,mode:mode,speed:1,threshold:1}
   };
+}
+
+// Apply smooth custom interaction to a chart after creation
+function applySmooth(chartId, mode='x'){
+  const canvas=document.getElementById(chartId);
+  if(!canvas||chartInteract[chartId])return;
+
+  let isDragging=false, lastX=0, lastY=0;
+  let velX=0, velY=0, rafId=null;
+
+  function getChart(){return charts[chartId];}
+
+  // Inertia decay loop
+  function inertiaStep(){
+    const ch=getChart();if(!ch)return;
+    velX*=0.88; velY*=0.88;
+    if(Math.abs(velX)<0.3&&Math.abs(velY)<0.3){rafId=null;return;}
+    panChart(ch,velX,velY,mode);
+    rafId=requestAnimationFrame(inertiaStep);
+  }
+
+  function panChart(ch,dx,dy,mode){
+    const xScale=ch.scales.x;
+    if(xScale&&(mode==='x'||mode==='xy')){
+      const range=xScale.max-xScale.min;
+      const shift=dx*(range/ch.width);
+      xScale.options.min=xScale.min-shift;
+      xScale.options.max=xScale.max-shift;
+    }
+    if(mode==='xy'){
+      // Pan all y axes
+      Object.keys(ch.scales).filter(k=>k.startsWith('y')).forEach(k=>{
+        const sc=ch.scales[k];
+        const range=sc.max-sc.min;
+        const shift=dy*(range/ch.height)*(-1);
+        sc.options.min=sc.min-shift;
+        sc.options.max=sc.max-shift;
+      });
+    }
+    ch.update('none');
+  }
+
+  canvas.addEventListener('mousedown',e=>{
+    isDragging=true;
+    lastX=e.clientX; lastY=e.clientY;
+    velX=0; velY=0;
+    if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+    canvas.style.cursor='grabbing';
+  },{passive:true});
+
+  window.addEventListener('mousemove',e=>{
+    if(!isDragging)return;
+    const dx=e.clientX-lastX;
+    const dy=e.clientY-lastY;
+    velX=dx; velY=dy;
+    const ch=getChart();if(ch)panChart(ch,dx,dy,mode);
+    lastX=e.clientX; lastY=e.clientY;
+  },{passive:true});
+
+  window.addEventListener('mouseup',()=>{
+    if(!isDragging)return;
+    isDragging=false;
+    canvas.style.cursor='crosshair';
+    // Launch inertia
+    if(Math.abs(velX)>1||Math.abs(velY)>1){
+      rafId=requestAnimationFrame(inertiaStep);
+    }
+  },{passive:true});
+
+  // Smooth wheel zoom
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const ch=getChart();if(!ch)return;
+    const rect=canvas.getBoundingClientRect();
+    const mouseXRatio=(e.clientX-rect.left)/rect.width;
+    const mouseYRatio=(e.clientY-rect.top)/rect.height;
+    const factor=e.deltaY>0?1.06:0.94; // ~6% per tick, very smooth
+
+    const xScale=ch.scales.x;
+    if(xScale&&(mode==='x'||mode==='xy')){
+      const range=xScale.max-xScale.min;
+      const newRange=range*factor;
+      const pivot=xScale.min+range*mouseXRatio;
+      xScale.options.min=pivot-newRange*mouseXRatio;
+      xScale.options.max=pivot+newRange*(1-mouseXRatio);
+    }
+    if(mode==='xy'){
+      Object.keys(ch.scales).filter(k=>k.startsWith('y')).forEach(k=>{
+        const sc=ch.scales[k];
+        const range=sc.max-sc.min;
+        const newRange=range*factor;
+        const pivot=sc.min+range*(1-mouseYRatio);
+        sc.options.min=pivot-newRange*(1-mouseYRatio);
+        sc.options.max=pivot+newRange*mouseYRatio;
+      });
+    }
+    ch.update('none');
+  },{passive:false});
+
+  canvas.style.cursor='crosshair';
+  chartInteract[chartId]=true;
+}
+
+function resetZoom(id){
+  // Clear custom min/max and re-render
+  const ch=charts[id];
+  if(!ch)return;
+  Object.keys(ch.scales).forEach(k=>{
+    ch.scales[k].options.min=undefined;
+    ch.scales[k].options.max=undefined;
+  });
+  ch.update();
+  // Clear interaction state so it re-attaches cleanly
+  delete chartInteract[id];
+  // Re-render the chart from scratch to restore original scales
+  renderStats();
 }
 
 function renderScoreChart(){
   destroyChart('chartScore');
   const buckets=buildBuckets(activePeriod,chartOffsets.score);
-  const data=buckets.map(b=>b.days.length?calcScore(b.days[0],b.days[b.days.length-1]).overall:0);
-  // Show at least 0 values so chart frame renders even with 1 day of data
+  // Use null for future/empty buckets so chart doesn't show 0 falsely
+  const data=buckets.map(b=>{
+    if(!b.days.length)return null;
+    const hasAnyData=b.days.some(d=>Object.keys(habitLog).includes(d)||journal.some(j=>j.date===d));
+    return hasAnyData?calcScore(b.days[0],b.days[b.days.length-1]).overall:null;
+  });
   const _snl=document.getElementById('scoreNavLabel');if(_snl)_snl.textContent=periodWindowLabel(activePeriod,chartOffsets.score);
   const ctx=document.getElementById('chartScore').getContext('2d');
   const grad=ctx.createLinearGradient(0,0,0,260);
@@ -2246,6 +2365,7 @@ function renderScoreChart(){
       }
     }
   });
+  setTimeout(()=>applySmooth('chartScore','x'),50);
 }
 
 function renderConsistencyChart(fromDate,toDate){
@@ -2273,8 +2393,9 @@ function renderConsistencyChart(fromDate,toDate){
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:8,padding:10}},
-        tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.dataset.label}: ${c.raw}${c.datasetIndex===0?'%':' pts'}`}}},
+        tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.dataset.label}: ${c.raw}${c.datasetIndex===0?'%':' pts'}`}},zoom:makeZoom()},
       scales:baseScales(100,false)}});
+  setTimeout(()=>applySmooth('chartConsistency','x'),50);
 }
 
 function renderDayOfWeekChart(fromDate,toDate){
@@ -2282,9 +2403,11 @@ function renderDayOfWeekChart(fromDate,toDate){
   const data=calcDayOfWeek(fromDate,toDate);
   if(!data){
     const ctx=document.getElementById('chartDayOfWeek')?.getContext('2d');
-    if(ctx){setTimeout(()=>{ctx.fillStyle='rgba(0,210,255,0.15)';ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('// Add checkbox habits to see day breakdown',ctx.canvas.width/2,ctx.canvas.height/2);},30);}
+    if(ctx){setTimeout(()=>{ctx.fillStyle='rgba(0,210,255,0.15)';ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('// Add habits to see day breakdown',ctx.canvas.width/2,ctx.canvas.height/2);},30);}
     return;
   }
+  // Store for detail view
+  window._dowData={data,fromDate,toDate};
   const ctx=document.getElementById('chartDayOfWeek').getContext('2d');
   const rates=data.map(d=>d.rate??0);
   const best=Math.max(...rates);
@@ -2297,10 +2420,39 @@ function renderDayOfWeekChart(fromDate,toDate){
       borderWidth:1,borderRadius:2
     }]},
     options:{responsive:true,maintainAspectRatio:false,
+      onClick:(evt,els)=>{if(els.length)renderDowDetail(els[0].index,fromDate,toDate);},
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{
-        label:c=>{const isBest=c.raw===best,isWorst=c.raw===worst&&c.raw>0;return`${c.raw}%${isBest?' ← best day':isWorst?' ← weakest':''}`;}}
-      }},
+        label:c=>{const isBest=c.raw===best,isWorst=c.raw===worst&&c.raw>0;return`${c.raw}%${isBest?' ← best day':isWorst?' ← weakest':''}  · click for detail`;}
+      }},zoom:makeZoom('x')},
       scales:{...baseScales(100,true),x:{...baseScales(100,true).x,ticks:{...baseScales(100,true).x.ticks,maxRotation:0}}}}});
+  setTimeout(()=>applySmooth('chartDayOfWeek','x'),50);
+}
+
+
+function renderDowDetail(dayIdx,fromDate,toDate){
+  const dowNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayName=dowNames[dayIdx];
+  const el=document.getElementById('dowDetail');
+  if(!el)return;
+  const days=getDaysInRange(fromDate,toDate).filter(d=>new Date(d+'T12:00:00').getDay()===dayIdx);
+  if(!days.length){el.innerHTML='';return;}
+  const rows=habits.map(h=>{
+    const color=h.color||getCatColor(h.category||'General');
+    const vals=days.map(d=>getHabitValue(h.id,d)).filter(v=>v!==null);
+    const doneCount=days.filter(d=>isHabitDone(h.id,d)).length;
+    const pct=Math.round(doneCount/days.length*100);
+    let avgStr='';
+    if(vals.length&&habitIsNumeric(h)){
+      const nums=vals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+      if(nums.length)avgStr=` avg ${Math.round(nums.reduce((a,b)=>a+b,0)/nums.length*10)/10}${h.unit?' '+h.unit:''}`;
+    }
+    return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <div style="width:6px;height:6px;background:${color};box-shadow:0 0 4px ${color};flex-shrink:0;"></div>
+      <div style="flex:1;font-size:9px;color:var(--text);letter-spacing:1px;">${h.name}</div>
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:${pct>=70?'var(--accent2)':pct>=40?'var(--warn)':'var(--red)'};">${pct}%${avgStr}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div style="font-size:8px;letter-spacing:2px;color:var(--accent);margin-bottom:6px;">// ${dayName.toUpperCase()} BREAKDOWN</div>${rows}`;
 }
 
 function renderMotPerfChart(fromDate,toDate){
@@ -2397,6 +2549,7 @@ function renderHabitChart(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% done`}},zoom:makeZoom()},
       scales:baseScales(100,true)}});
+  setTimeout(()=>applySmooth('chartHabit','x'),50);
 }
 
 function renderMotChart(){
@@ -2421,6 +2574,7 @@ function renderMotChart(){
       plugins:{legend:{display:false},
         tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.raw===null?'No entry':`Motivation: ${c.raw}/10`}},zoom:makeZoom()},
       scales:{x:baseScales(10,false).x,y:{min:0,max:10,ticks:{color:TC,font:CF,stepSize:2},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
+  setTimeout(()=>applySmooth('chartMot','x'),50);
 }
 
 function renderGoalChart(){
@@ -2436,6 +2590,7 @@ function renderGoalChart(){
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% complete`}}},
       scales:{x:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
               y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
+  setTimeout(()=>applySmooth('chartGoal','x'),50);
 }
 
 // ── COMPARE CHART ─────────────────────────────────────────────
@@ -2537,12 +2692,19 @@ function renderCompareChart(){
       scales
     }
   });
+  setTimeout(()=>applySmooth('chartCompare','xy'),50);
 }
 
 // ── YEAR HEATMAP ──────────────────────────────────────────────
 function renderHeatmap(){
   const el=document.getElementById('heatmapSection');
+  if(!el)return;
   if(!habits.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">◈</div>No habits yet.</div>';return;}
+  // Show loading state first so page doesn't freeze
+  el.innerHTML='<div class="loading"><div class="spinner"></div>Building heatmap...</div>';
+  setTimeout(()=>_renderHeatmapInner(el),30);
+}
+function _renderHeatmapInner(el){
 
   // Build 52 weeks of dates ending today
   const td=today();
@@ -2710,8 +2872,9 @@ function renderSparklineChart(){
     datasets.push({label:'Wake Time',data,borderColor:'#ff7eb3',backgroundColor:'transparent',
       pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yTime'});
     const nonNull=data.filter(v=>v!==null);
-    const mn=nonNull.length?Math.min(...nonNull)-30:300,mx=nonNull.length?Math.max(...nonNull)+30:720;
-    scales['yTime']={position:'right',min:Math.max(0,mn),max:mx,
+    const mn=nonNull.length?Math.max(0,Math.min(...nonNull)-60):0;
+    const mx=nonNull.length?Math.min(1439,Math.max(...nonNull)+60):1439;
+    scales['yTime']={position:'right',min:mn,max:mx,
       ticks:{color:TC,font:CF,callback:v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}},
       grid:{color:'transparent'},border:{color:'rgba(0,210,255,0.08)'}};
   }
@@ -2722,6 +2885,7 @@ function renderSparklineChart(){
       plugins:{legend:{display:datasets.length>1,labels:{color:TC,font:CF,boxWidth:10,padding:10}},
         tooltip:tooltipDefaults(),zoom:makeZoom('x')},
       scales}});
+  setTimeout(()=>applySmooth('chartSparkline','x'),50);
 }
 
 // ── CUSTOM CORRELATION ────────────────────────────────────────
@@ -2846,6 +3010,7 @@ function renderCorrDetail(){
           yA:{position:'left',ticks:{color:aColor,font:CF,maxTicksLimit:5},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
           yB:{position:'right',ticks:{color:bColor,font:CF,maxTicksLimit:5},grid:{color:'transparent'},border:{color:'rgba(0,210,255,0.08)'}}
         }}});
+  setTimeout(()=>applySmooth('chartCorrDetail','x'),50);
   }else{
     // Scatter + r
     const points=days.map(d=>{
@@ -2861,6 +3026,7 @@ function renderCorrDetail(){
           x:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:hA.name,color:TC,font:CF}},
           y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:hB.name,color:TC,font:CF}}
         }}});
+  setTimeout(()=>applySmooth('chartCorrDetail','xy'),50);
   }
 }
 
@@ -2906,6 +3072,7 @@ function renderGoalTimeChart(){
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`Progress: ${c.raw}%`}},zoom:makeZoom('x')},
       scales:{x:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
         y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
+  setTimeout(()=>applySmooth('chartGoalTime','x'),50);
 }
 
 // Log goal progress snapshot when it changes
