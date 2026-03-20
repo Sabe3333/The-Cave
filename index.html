@@ -547,6 +547,41 @@ select.input{cursor:pointer;}
 .milestone-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;transition:color 0.15s;}
 .milestone-del:hover{color:var(--red);}
 .add-milestone-row{display:flex;gap:6px;margin-top:8px;}
+
+/* AI PANEL */
+#aiBtnWrap{position:fixed;bottom:24px;right:24px;z-index:150;}
+.ai-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#4285f4,#34a853);border:1px solid rgba(66,133,244,0.4);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(66,133,244,0.3),0 4px 16px rgba(0,0,0,0.4);transition:all 0.2s;font-family:'Orbitron',monospace;font-weight:700;font-size:14px;letter-spacing:1px;}
+.ai-btn:hover{transform:scale(1.08);box-shadow:0 0 30px rgba(66,133,244,0.5),0 4px 20px rgba(0,0,0,0.5);}
+.ai-btn.open{background:var(--text3);box-shadow:none;font-size:20px;letter-spacing:0;}
+#aiPanel{position:fixed;bottom:88px;right:24px;width:400px;max-width:calc(100vw - 32px);height:540px;max-height:calc(100vh - 120px);background:var(--panel2);border:1px solid rgba(66,133,244,0.3);display:none;flex-direction:column;z-index:150;clip-path:polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px);backdrop-filter:blur(20px);}
+#aiPanel.open{display:flex;animation:slideUp 0.2s ease;}
+#aiPanel::before,#aiPanel::after{content:'';position:absolute;width:12px;height:12px;border-style:solid;}
+#aiPanel::before{top:0;left:0;border-color:#4285f4;border-width:1px 0 0 1px;}
+#aiPanel::after{bottom:0;right:0;border-color:#34a853;border-width:0 1px 1px 0;}
+.ai-panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(66,133,244,0.2);}
+.ai-panel-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:3px;background:linear-gradient(90deg,#4285f4,#34a853);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:8px;}
+.ai-panel-title::before{content:'';width:8px;height:8px;background:linear-gradient(135deg,#4285f4,#34a853);border-radius:50%;box-shadow:0 0 8px #4285f4;animation:pulse 2s infinite;flex-shrink:0;}
+.ai-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1;transition:color 0.15s;}
+.ai-close:hover{color:var(--text);}
+.ai-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ai-messages::-webkit-scrollbar{width:2px;}
+.ai-messages::-webkit-scrollbar-thumb{background:var(--text3);}
+.ai-msg{max-width:94%;font-size:12px;line-height:1.75;font-family:'DM Mono',monospace;}
+.ai-msg.user{align-self:flex-end;background:rgba(66,133,244,0.12);border:1px solid rgba(66,133,244,0.25);padding:8px 12px;clip-path:polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px);color:var(--text);}
+.ai-msg.ai{align-self:flex-start;color:var(--text);padding:2px 0;}
+.ai-msg.ai .ai-msg-label{font-size:8px;letter-spacing:3px;background:linear-gradient(90deg,#4285f4,#34a853);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-transform:uppercase;margin-bottom:4px;}
+.ai-msg.thinking{color:var(--text2);font-style:italic;font-size:11px;display:flex;align-items:center;gap:6px;}
+.ai-msg.thinking::before{content:'';width:6px;height:6px;background:#4285f4;border-radius:50%;animation:pulse 0.8s infinite;}
+.ai-suggestions{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 10px;}
+.ai-suggestion{padding:4px 10px;background:rgba(66,133,244,0.08);border:1px solid rgba(66,133,244,0.2);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);transition:all 0.15s;}
+.ai-suggestion:hover{border-color:#4285f4;color:#4285f4;}
+.ai-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid rgba(66,133,244,0.15);}
+#aiInput{flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(66,133,244,0.2);color:var(--text);padding:8px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;clip-path:polygon(5px 0%,100% 0%,100% calc(100% - 5px),calc(100% - 5px) 100%,0% 100%,0% 5px);transition:border-color 0.15s;}
+#aiInput:focus{border-color:#4285f4;}
+.ai-send{background:linear-gradient(135deg,#4285f4,#34a853);border:none;color:#fff;width:34px;height:34px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);transition:all 0.15s;flex-shrink:0;}
+.ai-send:hover{opacity:0.85;}
+.ai-send:disabled{opacity:0.35;cursor:not-allowed;}
+@media(max-width:480px){#aiPanel{width:calc(100vw - 16px);right:8px;}#aiBtnWrap{right:16px;bottom:16px;}}
 </style>
 </head>
 <body>
@@ -941,6 +976,35 @@ select.input{cursor:pointer;}
       <button class="btn" onclick="saveAddCorr()"><span>Add</span></button>
       <button class="btn-ghost" onclick="closeModal('addCorrModal')">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- AI PANEL -->
+<div id="aiBtnWrap">
+  <button class="ai-btn" id="aiBtn" onclick="toggleAI()" title="Cave AI — powered by Gemini">AI</button>
+</div>
+<div id="aiPanel">
+  <div class="ai-panel-header">
+    <div class="ai-panel-title">Cave AI</div>
+    <button class="ai-close" onclick="toggleAI()">×</button>
+  </div>
+  <div class="ai-messages" id="aiMessages">
+    <div class="ai-msg ai">
+      <div class="ai-msg-label">// Cave AI · Gemini</div>
+      <div id="aiWelcome">I have full access to your habits, scores, streaks, goals and journal. Ask me anything about your data.</div>
+    </div>
+  </div>
+  <div class="ai-suggestions" id="aiSuggestions">
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Weekly review</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">What should I focus on?</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Weakest habit?</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Score breakdown</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Sleep vs work pattern</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">What am I improving at?</button>
+  </div>
+  <div class="ai-input-row">
+    <input type="text" id="aiInput" placeholder="// ask anything about your data..." onkeydown="if(event.key==='Enter')sendAI()">
+    <button class="ai-send" id="aiSendBtn" onclick="sendAI()">▸</button>
   </div>
 </div>
 
@@ -2981,6 +3045,176 @@ function render(){renderDashboard();renderHabits();renderGoals();renderJournal()
 
 
 
+
+// ── CAVE AI (Gemini) ──────────────────────────────────────────
+const GEMINI_KEY='AIzaSyB_jjYT3WtbsKwK3Kas7ykmVtFE7xxCQrU';
+const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+
+function toggleAI(){
+  const panel=document.getElementById('aiPanel');
+  const btn=document.getElementById('aiBtn');
+  const open=panel.classList.toggle('open');
+  btn.classList.toggle('open',open);
+  btn.textContent=open?'×':'AI';
+  if(open)document.getElementById('aiInput').focus();
+}
+
+function buildAIContext(){
+  const td=today();
+  const{start:wStart,end:wEnd}=getPeriodRange('week');
+  const{start:mStart,end:mEnd}=getPeriodRange('month');
+  const sc=calcScore(wStart,wEnd);
+  const scMonth=calcScore(mStart,mEnd);
+
+  // All logged dates sorted
+  const allDates=[...new Set(Object.keys(habitLog))].sort();
+
+  // Per-habit full history summary
+  const habitSummaries=habits.map(h=>{
+    const streak=getStreak(h);
+    const loggedDays=allDates.filter(d=>isHabitDone(h.id,d)||getHabitValue(h.id,d));
+    const vals=allDates.map(d=>getHabitValue(h.id,d)).filter(v=>v&&v!=='0');
+    let avgStr='';
+    if(vals.length&&habitIsNumeric(h)){
+      const nums=vals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+      if(nums.length){
+        const avg=nums.reduce((a,b)=>a+b,0)/nums.length;
+        const best=Math.max(...nums);
+        avgStr=` avg:${Math.round(avg*10)/10} best:${best}${h.unit?' '+h.unit:''}`;
+      }
+    }
+    if(vals.length&&habitIsTime(h)){
+      avgStr=` logged ${vals.length} days`;
+    }
+    const weekScore=calcScore(wStart,wEnd);
+    const recentDays=allDates.slice(-14);
+    const recentDone=recentDays.filter(d=>scoreHabitDay(h,d)>0).length;
+    return `- ${h.name} [${h.category||'General'}] type:${h.type} streak:${streak}d logged:${loggedDays.length}days${h.target?' target:'+h.target+(h.unit?' '+h.unit:''):''} recent14d:${recentDone}/14${avgStr}`;
+  }).join('\n');
+
+  // Today detail
+  const todayDetail=habits.map(h=>{
+    const val=getHabitValue(h.id,td)||(isHabitDone(h.id,td)?'done':'—');
+    const score=scoreHabitDay(h,td);
+    return`- ${h.name}: ${val} (${score}%)`;
+  }).join('\n');
+
+  // Yesterday detail
+  const yd=subDays(1);
+  const ydDetail=habits.map(h=>{
+    const val=getHabitValue(h.id,yd)||(isHabitDone(h.id,yd)?'done':'—');
+    const score=scoreHabitDay(h,yd);
+    return`- ${h.name}: ${val} (${score}%)`;
+  }).join('\n');
+
+  // Last 7 days score trend
+  const last7=Array.from({length:7},(_,i)=>subDays(6-i));
+  const scoreTrend=last7.map(d=>{
+    const s=calcScore(d,d).overall;
+    return`${new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'})}:${s}`;
+  }).join(' ');
+
+  // All journal entries
+  const allJournal=journal.map(j=>
+    `[${j.date}] mot:${j.motivation}/10 — "${j.text.slice(0,150)}${j.text.length>150?'…':''}"`
+  ).join('\n');
+
+  // Goals with milestones
+  const goalsDetail=goals.map(g=>{
+    const gm=milestones.filter(m=>m.goal_id===g.id);
+    const msStr=gm.length?` milestones:[${gm.map(m=>`${m.done?'✓':'○'} ${m.name}`).join(', ')}]`:'';
+    return`- ${g.name}: ${g.progress}%${g.deadline?' deadline:'+g.deadline:''}${msStr}`;
+  }).join('\n');
+
+  // Notes from threads
+  const notesSummary=notes.length?notes.slice(0,30).map(n=>{
+    const ref=n.type==='habit'?habits.find(h=>h.id===n.ref_id)?.name:goals.find(g=>g.id===n.ref_id)?.name;
+    return`[${new Date(n.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}] ${ref||n.type}: "${n.text}"`;
+  }).join('\n'):'No notes logged';
+
+  return`You are a personal performance coach AI inside "The Cave" — a discipline and habit tracker. You have the user's COMPLETE data history below. Be direct, specific, analytical. Reference actual numbers and dates. Keep responses under 220 words. Plain text only, no markdown.
+
+TODAY (${td}):
+${todayDetail||'Nothing logged yet today'}
+
+YESTERDAY (${yd}):
+${ydDetail||'Nothing logged'}
+
+LAST 7 DAYS SCORE TREND: ${scoreTrend}
+THIS WEEK SCORE: ${sc.overall}/100 (habits:${sc.habitScore}% motivation:${sc.motHasData?sc.motScore/10+'/10':'no entries'} goals:${sc.goalScore}%)
+THIS MONTH SCORE: ${scMonth.overall}/100
+
+ALL HABITS — FULL HISTORY:
+${habitSummaries||'No habits created yet'}
+
+GOALS:
+${goalsDetail||'No goals set'}
+
+HABIT NOTES THREAD (most recent 30):
+${notesSummary}
+
+ALL JOURNAL ENTRIES (${journal.length} total):
+${allJournal||'No journal entries'}`;
+}
+
+async function askAI(question){
+  document.getElementById('aiInput').value=question;
+  await sendAI();
+}
+
+async function sendAI(){
+  const input=document.getElementById('aiInput');
+  const msg=input.value.trim();
+  if(!msg)return;
+  input.value='';
+  const sendBtn=document.getElementById('aiSendBtn');
+  sendBtn.disabled=true;
+  document.getElementById('aiSuggestions').style.display='none';
+  const messagesEl=document.getElementById('aiMessages');
+
+  // Add user message
+  messagesEl.innerHTML+=`<div class="ai-msg user">${msg.replace(/</g,'&lt;')}</div>`;
+
+  // Thinking indicator
+  const thinkId='think_'+Date.now();
+  messagesEl.innerHTML+=`<div class="ai-msg thinking" id="${thinkId}">analyzing your data...</div>`;
+  messagesEl.scrollTop=messagesEl.scrollHeight;
+
+  try{
+    const res=await fetch(GEMINI_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[
+          {role:'user',parts:[{text:buildAIContext()+'\n\nUser question: '+msg}]}
+        ],
+        generationConfig:{
+          temperature:0.75,
+          maxOutputTokens:600
+        }
+      })
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||'Gemini API error');
+    const reply=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
+    document.getElementById(thinkId)?.remove();
+    messagesEl.innerHTML+=`<div class="ai-msg ai">
+      <div class="ai-msg-label">// Cave AI · Gemini</div>
+      <div>${reply.replace(/\n/g,'<br>').replace(/</g,'&lt;').replace(/&lt;br>/g,'<br>')}</div>
+    </div>`;
+  }catch(e){
+    document.getElementById(thinkId)?.remove();
+    messagesEl.innerHTML+=`<div class="ai-msg ai">
+      <div class="ai-msg-label">// Cave AI</div>
+      <div style="color:var(--red)">Error: ${e.message}</div>
+    </div>`;
+    console.error('Gemini error:',e);
+  }
+
+  sendBtn.disabled=false;
+  messagesEl.scrollTop=messagesEl.scrollHeight;
+  input.focus();
+}
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
