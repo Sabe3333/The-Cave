@@ -981,7 +981,7 @@ select.input{cursor:pointer;}
 
 <!-- AI PANEL -->
 <div id="aiBtnWrap">
-  <button class="ai-btn" id="aiBtn" onclick="toggleAI()" title="Cave AI — powered by Gemini">AI</button>
+  <button class="ai-btn" id="aiBtn" onclick="toggleAI()" title="Cave AI — powered by Groq / Llama 3">AI</button>
 </div>
 <div id="aiPanel">
   <div class="ai-panel-header">
@@ -990,7 +990,7 @@ select.input{cursor:pointer;}
   </div>
   <div class="ai-messages" id="aiMessages">
     <div class="ai-msg ai">
-      <div class="ai-msg-label">// Cave AI · Gemini</div>
+      <div class="ai-msg-label">// Cave AI · Llama 3</div>
       <div id="aiWelcome">I have full access to your habits, scores, goals, notes and journal. Completely free — no key needed. Ask me anything about your data.</div>
     </div>
   </div>
@@ -3046,8 +3046,10 @@ function render(){renderDashboard();renderHabits();renderGoals();renderJournal()
 
 
 
-// ── CAVE AI (Pollinations — free, no key, no account) ────────
-// Uses pollinations.ai open API — completely free, unlimited
+// ── CAVE AI (Groq — free tier, fast, Llama 3) ────────────────
+// groq.com — free account, no card, 14400 req/day
+// Key stored in localStorage only, never in source code
+let AI_KEY=localStorage.getItem('cave_ai_key')||'';
 
 function toggleAI(){
   const panel=document.getElementById('aiPanel');
@@ -3055,7 +3057,42 @@ function toggleAI(){
   const open=panel.classList.toggle('open');
   btn.classList.toggle('open',open);
   btn.textContent=open?'×':'AI';
-  if(open)document.getElementById('aiInput').focus();
+  if(open){initAIPanel();document.getElementById('aiInput').focus();}
+}
+
+function initAIPanel(){
+  const el=document.getElementById('aiWelcome');
+  if(!el)return;
+  if(!AI_KEY){
+    el.innerHTML=`No API key set.<br><br>
+    <span style="font-size:10px;color:var(--text2);">Get a free key at <b style="color:var(--accent)">console.groq.com</b><br>Sign up with email → API Keys → Create key<br>Paste it below — stored only in your browser.</span><br><br>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input id="aiKeyInput" type="password" placeholder="paste your key here..."
+        style="flex:1;background:rgba(0,0,0,0.4);border:1px solid var(--border2);color:var(--text);padding:7px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);"
+        onkeydown="if(event.key==='Enter')saveAIKey()">
+      <button onclick="saveAIKey()" style="background:var(--accent);border:none;color:#000;padding:7px 14px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);">Save</button>
+    </div>`;
+  }else{
+    el.innerHTML=`I have full access to your habits, scores, goals, notes and journal. Ask me anything.
+    <span style="display:block;margin-top:6px;font-size:8px;color:var(--text3);cursor:pointer;" onclick="clearAIKey()">// clear api key</span>`;
+  }
+}
+
+function saveAIKey(){
+  const input=document.getElementById('aiKeyInput');
+  const key=input?input.value.trim():'';
+  if(!key||key.length<10){alert('Please paste a valid API key.');return;}
+  AI_KEY=key;
+  localStorage.setItem('cave_ai_key',AI_KEY);
+  initAIPanel();
+  document.getElementById('aiInput').focus();
+}
+
+function clearAIKey(){
+  if(!confirm('Remove saved API key?'))return;
+  AI_KEY='';
+  localStorage.removeItem('cave_ai_key');
+  initAIPanel();
 }
 
 function buildAIContext(){
@@ -3162,6 +3199,7 @@ async function askAI(question){
 }
 
 async function sendAI(){
+  if(!AI_KEY){initAIPanel();return;}
   const input=document.getElementById('aiInput');
   const msg=input.value.trim();
   if(!msg)return;
@@ -3175,29 +3213,42 @@ async function sendAI(){
   messagesEl.innerHTML+=`<div class="ai-msg thinking" id="${thinkId}">analyzing your data...</div>`;
   messagesEl.scrollTop=messagesEl.scrollHeight;
 
-  const systemPrompt=buildAIContext();
-  const fullPrompt=systemPrompt+'\n\nUser question: '+msg;
-
   try{
-    // Pollinations text API — free, no key, no account needed
-    const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(fullPrompt),{
-      method:'GET',
-      headers:{'Accept':'text/plain'}
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+AI_KEY
+      },
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        messages:[
+          {role:'system',content:buildAIContext()},
+          {role:'user',content:msg}
+        ],
+        max_tokens:500,
+        temperature:0.7
+      })
     });
-    if(!res.ok)throw new Error('Request failed: '+res.status);
-    const reply=await res.text();
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||'API error');
+    const reply=data.choices?.[0]?.message?.content||'No response received.';
     document.getElementById(thinkId)?.remove();
     messagesEl.innerHTML+=`<div class="ai-msg ai">
-      <div class="ai-msg-label">// Cave AI</div>
-      <div>${(reply||'No response.').replace(/\n/g,'<br>').replace(/</g,'&lt;').replace(/&lt;br>/g,'<br>')}</div>
+      <div class="ai-msg-label">// Cave AI · Llama 3</div>
+      <div>${reply.replace(/\n/g,'<br>').replace(/</g,'&lt;').replace(/&lt;br>/g,'<br>')}</div>
     </div>`;
   }catch(e){
     document.getElementById(thinkId)?.remove();
+    const isAuth=e.message?.toLowerCase().includes('auth')||e.message?.includes('401')||e.message?.includes('invalid');
     messagesEl.innerHTML+=`<div class="ai-msg ai">
       <div class="ai-msg-label">// Cave AI</div>
-      <div style="color:var(--red)">Error: ${e.message.slice(0,120)}<br><span style="font-size:9px;color:var(--text3)">Check connection and try again.</span></div>
+      <div style="color:var(--red)">${isAuth
+        ?'Invalid key — <span style=\'cursor:pointer;color:var(--accent);text-decoration:underline\' onclick=\'clearAIKey()\'>clear and re-enter</span>'
+        :'Error: '+e.message.slice(0,120)
+      }</div>
     </div>`;
-    console.error('AI error:',e);
+    console.error('AI:',e);
   }
   sendBtn.disabled=false;
   messagesEl.scrollTop=messagesEl.scrollHeight;
