@@ -991,16 +991,16 @@ select.input{cursor:pointer;}
   <div class="ai-messages" id="aiMessages">
     <div class="ai-msg ai">
       <div class="ai-msg-label">// Cave AI · Gemini</div>
-      <div id="aiWelcome">I have full access to your habits, scores, streaks, goals and journal. Ask me anything about your data.</div>
+      <div id="aiWelcome">I have full access to your habits, scores, goals, notes and journal. Completely free — no key needed. Ask me anything about your data.</div>
     </div>
   </div>
   <div class="ai-suggestions" id="aiSuggestions">
     <button class="ai-suggestion" onclick="askAI(this.textContent)">Weekly review</button>
-    <button class="ai-suggestion" onclick="askAI(this.textContent)">What should I focus on?</button>
-    <button class="ai-suggestion" onclick="askAI(this.textContent)">Weakest habit?</button>
-    <button class="ai-suggestion" onclick="askAI(this.textContent)">Score breakdown</button>
-    <button class="ai-suggestion" onclick="askAI(this.textContent)">Sleep vs work pattern</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">What should I focus on today?</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Where am I slipping?</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Analyze my sleep patterns</button>
     <button class="ai-suggestion" onclick="askAI(this.textContent)">What am I improving at?</button>
+    <button class="ai-suggestion" onclick="askAI(this.textContent)">Goal progress check</button>
   </div>
   <div class="ai-input-row">
     <input type="text" id="aiInput" placeholder="// ask anything about your data..." onkeydown="if(event.key==='Enter')sendAI()">
@@ -3046,12 +3046,8 @@ function render(){renderDashboard();renderHabits();renderGoals();renderJournal()
 
 
 
-// ── CAVE AI (Gemini) ──────────────────────────────────────────
-// Key lives in localStorage only — never in source code
-let GEMINI_KEY=localStorage.getItem('cave_gemini_key')||'';
-function getGeminiURL(){
-  return`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
-}
+// ── CAVE AI (Pollinations — free, no key, no account) ────────
+// Uses pollinations.ai open API — completely free, unlimited
 
 function toggleAI(){
   const panel=document.getElementById('aiPanel');
@@ -3059,36 +3055,7 @@ function toggleAI(){
   const open=panel.classList.toggle('open');
   btn.classList.toggle('open',open);
   btn.textContent=open?'×':'AI';
-  if(open){
-    initAIWelcome();
-    document.getElementById('aiInput').focus();
-  }
-}
-
-function initAIWelcome(){
-  const el=document.getElementById('aiWelcome');
-  if(!el)return;
-  if(!GEMINI_KEY){
-    el.innerHTML=`No API key set.<br><br>
-      <span style="color:var(--text2);font-size:10px;">Get a free key at <span style="color:#4285f4">aistudio.google.com</span> → Get API key</span><br><br>
-      <button onclick="promptGeminiKey()" style="background:linear-gradient(135deg,#4285f4,#34a853);border:none;color:#fff;padding:7px 16px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;clip-path:polygon(5px 0%,100% 0%,100% calc(100% - 5px),calc(100% - 5px) 100%,0% 100%,0% 5px);">
-        Set API Key
-      </button>`;
-  }else{
-    el.innerHTML=`I have full access to your habits, scores, streaks, goals, notes and journal. Ask me anything about your data.
-      <span style="display:block;margin-top:6px;font-size:8px;color:var(--text3);cursor:pointer;" onclick="promptGeminiKey()">// change api key</span>`;
-  }
-}
-
-function promptGeminiKey(){
-  const key=prompt('Paste your Gemini API key:\n\nGet one free at aistudio.google.com → Get API key\nStored only in your browser, never in the code or GitHub.');
-  if(key&&key.trim().startsWith('AIza')){
-    GEMINI_KEY=key.trim();
-    localStorage.setItem('cave_gemini_key',GEMINI_KEY);
-    initAIWelcome();
-  }else if(key!==null){
-    alert('That doesn\'t look right — Gemini keys start with AIza');
-  }
+  if(open)document.getElementById('aiInput').focus();
 }
 
 function buildAIContext(){
@@ -3195,7 +3162,6 @@ async function askAI(question){
 }
 
 async function sendAI(){
-  if(!GEMINI_KEY){promptGeminiKey();return;}
   const input=document.getElementById('aiInput');
   const msg=input.value.trim();
   if(!msg)return;
@@ -3208,30 +3174,36 @@ async function sendAI(){
   const thinkId='think_'+Date.now();
   messagesEl.innerHTML+=`<div class="ai-msg thinking" id="${thinkId}">analyzing your data...</div>`;
   messagesEl.scrollTop=messagesEl.scrollHeight;
+
+  const systemPrompt=buildAIContext();
+  const fullPrompt=systemPrompt+'\n\nUser question: '+msg;
+
   try{
-    const res=await fetch(getGeminiURL(),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        contents:[{role:'user',parts:[{text:buildAIContext()+'\n\nUser question: '+msg}]}],
-        generationConfig:{temperature:0.75,maxOutputTokens:600}
-      })
+    // Pollinations text API — free, no key, no account needed
+    const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(fullPrompt),{
+      method:'GET',
+      headers:{'Accept':'text/plain'}
     });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message||'Gemini API error');
-    const reply=data.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
+    if(!res.ok)throw new Error('Request failed: '+res.status);
+    const reply=await res.text();
     document.getElementById(thinkId)?.remove();
-    messagesEl.innerHTML+=`<div class="ai-msg ai"><div class="ai-msg-label">// Cave AI · Gemini</div><div>${reply.replace(/\n/g,'<br>').replace(/</g,'&lt;').replace(/&lt;br>/g,'<br>')}</div></div>`;
+    messagesEl.innerHTML+=`<div class="ai-msg ai">
+      <div class="ai-msg-label">// Cave AI</div>
+      <div>${(reply||'No response.').replace(/\n/g,'<br>').replace(/</g,'&lt;').replace(/&lt;br>/g,'<br>')}</div>
+    </div>`;
   }catch(e){
     document.getElementById(thinkId)?.remove();
-    const isKeyErr=e.message?.includes('API key')||e.message?.includes('leaked')||e.message?.includes('invalid')||e.message?.includes('not found');
-    messagesEl.innerHTML+=`<div class="ai-msg ai"><div class="ai-msg-label">// Cave AI</div><div style="color:var(--red)">${isKeyErr?'Key issue — <span style=\'cursor:pointer;color:#4285f4;text-decoration:underline\' onclick=\'promptGeminiKey()\'>update key</span>':'Error: '+e.message.slice(0,120)}</div></div>`;
-    console.error('Gemini:',e);
+    messagesEl.innerHTML+=`<div class="ai-msg ai">
+      <div class="ai-msg-label">// Cave AI</div>
+      <div style="color:var(--red)">Error: ${e.message.slice(0,120)}<br><span style="font-size:9px;color:var(--text3)">Check connection and try again.</span></div>
+    </div>`;
+    console.error('AI error:',e);
   }
   sendBtn.disabled=false;
   messagesEl.scrollTop=messagesEl.scrollHeight;
   input.focus();
 }
+
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
