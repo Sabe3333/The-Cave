@@ -2185,20 +2185,19 @@ function baseScales(yMax,pct){return{
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tooltipDefaults(){return{backgroundColor:'rgba(4,14,22,0.95)',borderColor:'rgba(0,210,255,0.25)',borderWidth:1,titleColor:TC,bodyColor:'#c8e8f0',titleFont:CF,bodyFont:CF};}
 // ── SMOOTH CHART INTERACTION (trading-chart feel) ────────────
-// Custom wheel+drag handler bypasses the clunky zoom plugin
-// for smooth inertia pan and precise incremental zoom
-
-const chartInteract={};  // stores interaction state per canvas id
+const chartInteract={};
+const chartLimits={}; // stores {xMin,xMax,yMin,yMax} floor/ceil per chart
 
 function makeZoom(mode='x'){
-  // Still used for plugin registration but we override with custom handlers
   return{
-    zoom:{wheel:{enabled:true,speed:0.04},pinch:{enabled:true},mode:mode},
-    pan:{enabled:true,mode:mode,speed:1,threshold:1}
+    zoom:{wheel:{enabled:false},pinch:{enabled:false},mode:mode},
+    pan:{enabled:false,mode:mode}
   };
 }
 
-// Apply smooth custom interaction to a chart after creation
+// Set hard limits for a chart so you can't pan into negatives or nonsense
+function setChartLimits(id,limits){chartLimits[id]=limits;}
+
 function applySmooth(chartId, mode='x'){
   const canvas=document.getElementById(chartId);
   if(!canvas||chartInteract[chartId])return;
@@ -2207,92 +2206,119 @@ function applySmooth(chartId, mode='x'){
   let velX=0, velY=0, rafId=null;
 
   function getChart(){return charts[chartId];}
+  function getLimits(){return chartLimits[chartId]||{};}
 
-  // Inertia decay loop
-  function inertiaStep(){
-    const ch=getChart();if(!ch)return;
-    velX*=0.88; velY*=0.88;
-    if(Math.abs(velX)<0.3&&Math.abs(velY)<0.3){rafId=null;return;}
-    panChart(ch,velX,velY,mode);
-    rafId=requestAnimationFrame(inertiaStep);
+  function clampScale(sc,newMin,newMax,floorMin,ceilMax){
+    // Prevent going below floor or above ceiling
+    const range=newMax-newMin;
+    if(floorMin!==undefined&&newMin<floorMin){newMin=floorMin;newMax=floorMin+range;}
+    if(ceilMax!==undefined&&newMax>ceilMax){newMax=ceilMax;newMin=ceilMax-range;}
+    // Prevent inverting
+    if(newMin>=newMax)return;
+    sc.options.min=newMin;
+    sc.options.max=newMax;
   }
 
-  function panChart(ch,dx,dy,mode){
+  function panChart(ch,dx,dy){
+    const lim=getLimits();
+    // X axis — only if numeric (not categorical)
     const xScale=ch.scales.x;
-    if(xScale&&(mode==='x'||mode==='xy')){
+    if(xScale&&(mode==='x'||mode==='xy')&&xScale.type!=='category'){
       const range=xScale.max-xScale.min;
       const shift=dx*(range/ch.width);
-      xScale.options.min=xScale.min-shift;
-      xScale.options.max=xScale.max-shift;
+      clampScale(xScale,xScale.min-shift,xScale.max-shift,lim.xMin,lim.xMax);
+    }else if(xScale&&xScale.type==='category'&&(mode==='x'||mode==='xy')){
+      // Categorical x: pan by shifting visible range
+      const total=xScale.ticks.length||1;
+      const visible=xScale.max-xScale.min;
+      const shift=dx/ch.width*visible;
+      const newMin=Math.max(0,xScale.min-shift);
+      const newMax=Math.min(total-1,xScale.max-shift);
+      if(newMax-newMin>0.5){xScale.options.min=newMin;xScale.options.max=newMax;}
     }
-    if(mode==='xy'){
-      // Pan all y axes
-      Object.keys(ch.scales).filter(k=>k.startsWith('y')).forEach(k=>{
+    // Y axes
+    if(mode==='xy'||mode==='y'){
+      Object.keys(ch.scales).filter(k=>k.startsWith('y')).forEach((k,i)=>{
         const sc=ch.scales[k];
         const range=sc.max-sc.min;
         const shift=dy*(range/ch.height)*(-1);
-        sc.options.min=sc.min-shift;
-        sc.options.max=sc.max-shift;
+        const yFloor=lim.yMin!==undefined?lim.yMin:(i===0?lim.y0Min:undefined);
+        const yCeil=lim.yMax!==undefined?lim.yMax:undefined;
+        clampScale(sc,sc.min-shift,sc.max-shift,yFloor,yCeil);
       });
     }
     ch.update('none');
   }
 
+  function zoomChart(factor,mouseXRatio,mouseYRatio){
+    const ch=getChart();if(!ch)return;
+    const lim=getLimits();
+    const xScale=ch.scales.x;
+    if(xScale&&(mode==='x'||mode==='xy')&&xScale.type!=='category'){
+      const range=xScale.max-xScale.min;
+      const newRange=range*factor;
+      const pivot=xScale.min+range*mouseXRatio;
+      const newMin=pivot-newRange*mouseXRatio;
+      const newMax=pivot+newRange*(1-mouseXRatio);
+      clampScale(xScale,newMin,newMax,lim.xMin,lim.xMax);
+    }else if(xScale&&xScale.type==='category'&&(mode==='x'||mode==='xy')){
+      const total=xScale.ticks.length||10;
+      const range=xScale.max-xScale.min;
+      const newRange=Math.max(2,Math.min(total,range*factor));
+      const pivot=xScale.min+range*mouseXRatio;
+      const newMin=Math.max(0,pivot-newRange*mouseXRatio);
+      const newMax=Math.min(total-1,newMin+newRange);
+      xScale.options.min=newMin;xScale.options.max=newMax;
+    }
+    if(mode==='xy'||mode==='y'){
+      const lim=getLimits();
+      Object.keys(ch.scales).filter(k=>k.startsWith('y')).forEach((k,i)=>{
+        const sc=ch.scales[k];
+        const range=sc.max-sc.min;
+        const newRange=range*factor;
+        const pivot=sc.min+range*(1-mouseYRatio);
+        const yFloor=lim.yMin!==undefined?lim.yMin:(i===0?lim.y0Min:undefined);
+        clampScale(sc,pivot-newRange*(1-mouseYRatio),pivot+newRange*mouseYRatio,yFloor,lim.yMax);
+      });
+    }
+    ch.update('none');
+  }
+
+  function inertiaStep(){
+    const ch=getChart();if(!ch)return;
+    velX*=0.88;velY*=0.88;
+    if(Math.abs(velX)<0.3&&Math.abs(velY)<0.3){rafId=null;return;}
+    panChart(ch,velX,velY);
+    rafId=requestAnimationFrame(inertiaStep);
+  }
+
   canvas.addEventListener('mousedown',e=>{
-    isDragging=true;
-    lastX=e.clientX; lastY=e.clientY;
-    velX=0; velY=0;
+    isDragging=true;lastX=e.clientX;lastY=e.clientY;
+    velX=0;velY=0;
     if(rafId){cancelAnimationFrame(rafId);rafId=null;}
     canvas.style.cursor='grabbing';
   },{passive:true});
 
   window.addEventListener('mousemove',e=>{
     if(!isDragging)return;
-    const dx=e.clientX-lastX;
-    const dy=e.clientY-lastY;
-    velX=dx; velY=dy;
-    const ch=getChart();if(ch)panChart(ch,dx,dy,mode);
-    lastX=e.clientX; lastY=e.clientY;
+    const dx=e.clientX-lastX,dy=e.clientY-lastY;
+    velX=dx;velY=dy;
+    const ch=getChart();if(ch)panChart(ch,dx,dy);
+    lastX=e.clientX;lastY=e.clientY;
   },{passive:true});
 
   window.addEventListener('mouseup',()=>{
     if(!isDragging)return;
-    isDragging=false;
-    canvas.style.cursor='crosshair';
-    // Launch inertia
-    if(Math.abs(velX)>1||Math.abs(velY)>1){
-      rafId=requestAnimationFrame(inertiaStep);
-    }
+    isDragging=false;canvas.style.cursor='crosshair';
+    if(Math.abs(velX)>1||Math.abs(velY)>1)rafId=requestAnimationFrame(inertiaStep);
   },{passive:true});
 
-  // Smooth wheel zoom
   canvas.addEventListener('wheel',e=>{
     e.preventDefault();
-    const ch=getChart();if(!ch)return;
     const rect=canvas.getBoundingClientRect();
-    const mouseXRatio=(e.clientX-rect.left)/rect.width;
-    const mouseYRatio=(e.clientY-rect.top)/rect.height;
-    const factor=e.deltaY>0?1.06:0.94; // ~6% per tick, very smooth
-
-    const xScale=ch.scales.x;
-    if(xScale&&(mode==='x'||mode==='xy')){
-      const range=xScale.max-xScale.min;
-      const newRange=range*factor;
-      const pivot=xScale.min+range*mouseXRatio;
-      xScale.options.min=pivot-newRange*mouseXRatio;
-      xScale.options.max=pivot+newRange*(1-mouseXRatio);
-    }
-    if(mode==='xy'){
-      Object.keys(ch.scales).filter(k=>k.startsWith('y')).forEach(k=>{
-        const sc=ch.scales[k];
-        const range=sc.max-sc.min;
-        const newRange=range*factor;
-        const pivot=sc.min+range*(1-mouseYRatio);
-        sc.options.min=pivot-newRange*(1-mouseYRatio);
-        sc.options.max=pivot+newRange*mouseYRatio;
-      });
-    }
-    ch.update('none');
+    const mx=(e.clientX-rect.left)/rect.width;
+    const my=(e.clientY-rect.top)/rect.height;
+    zoomChart(e.deltaY>0?1.06:0.94,mx,my);
   },{passive:false});
 
   canvas.style.cursor='crosshair';
@@ -2300,17 +2326,8 @@ function applySmooth(chartId, mode='x'){
 }
 
 function resetZoom(id){
-  // Clear custom min/max and re-render
-  const ch=charts[id];
-  if(!ch)return;
-  Object.keys(ch.scales).forEach(k=>{
-    ch.scales[k].options.min=undefined;
-    ch.scales[k].options.max=undefined;
-  });
-  ch.update();
-  // Clear interaction state so it re-attaches cleanly
   delete chartInteract[id];
-  // Re-render the chart from scratch to restore original scales
+  delete chartLimits[id];
   renderStats();
 }
 
@@ -2359,13 +2376,13 @@ function renderScoreChart(){
       scales:{x:baseScales(100,false).x,
         y:{...baseScales(100,false).y,min:0,max:100,
           ticks:{color:TC,font:CF,
-            callback:v=>{if(v===70)return'70 ▸';if(v===40)return'40 ▸';return v;}
+            callback:v=>{if(!Number.isInteger(Math.round(v)))return'';if(v===70)return'70 ▸';if(v===40)return'40 ▸';return Math.round(v);}
           }
         }
       }
     }
   });
-  setTimeout(()=>applySmooth('chartScore','x'),50);
+  setTimeout(()=>{applySmooth('chartScore','x');setChartLimits('chartScore',{yMin:0,yMax:105});},50);
 }
 
 function renderConsistencyChart(fromDate,toDate){
@@ -2395,7 +2412,7 @@ function renderConsistencyChart(fromDate,toDate){
       plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:8,padding:10}},
         tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.dataset.label}: ${c.raw}${c.datasetIndex===0?'%':' pts'}`}},zoom:makeZoom()},
       scales:baseScales(100,false)}});
-  setTimeout(()=>applySmooth('chartConsistency','x'),50);
+  setTimeout(()=>{applySmooth('chartConsistency','x');setChartLimits('chartConsistency',{yMin:0,yMax:105});},50);
 }
 
 function renderDayOfWeekChart(fromDate,toDate){
@@ -2425,7 +2442,7 @@ function renderDayOfWeekChart(fromDate,toDate){
         label:c=>{const isBest=c.raw===best,isWorst=c.raw===worst&&c.raw>0;return`${c.raw}%${isBest?' ← best day':isWorst?' ← weakest':''}  · click for detail`;}
       }},zoom:makeZoom('x')},
       scales:{...baseScales(100,true),x:{...baseScales(100,true).x,ticks:{...baseScales(100,true).x.ticks,maxRotation:0}}}}});
-  setTimeout(()=>applySmooth('chartDayOfWeek','x'),50);
+  setTimeout(()=>{applySmooth('chartDayOfWeek','x');setChartLimits('chartDayOfWeek',{yMin:0,yMax:105});},50);
 }
 
 
@@ -2549,7 +2566,7 @@ function renderHabitChart(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% done`}},zoom:makeZoom()},
       scales:baseScales(100,true)}});
-  setTimeout(()=>applySmooth('chartHabit','x'),50);
+  setTimeout(()=>{applySmooth('chartHabit','x');setChartLimits('chartHabit',{yMin:0,yMax:105});},50);
 }
 
 function renderMotChart(){
@@ -2573,8 +2590,8 @@ function renderMotChart(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         tooltip:{...tooltipDefaults(),callbacks:{label:c=>c.raw===null?'No entry':`Motivation: ${c.raw}/10`}},zoom:makeZoom()},
-      scales:{x:baseScales(10,false).x,y:{min:0,max:10,ticks:{color:TC,font:CF,stepSize:2},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
-  setTimeout(()=>applySmooth('chartMot','x'),50);
+      scales:{x:baseScales(10,false).x,y:{min:0,max:10,ticks:{color:TC,font:CF,stepSize:2,callback:v=>Number.isInteger(v)?v:''},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
+  setTimeout(()=>{applySmooth('chartMot','x');setChartLimits('chartMot',{yMin:0,yMax:10.5});},50);
 }
 
 function renderGoalChart(){
@@ -2588,9 +2605,9 @@ function renderGoalChart(){
         borderWidth:1,borderRadius:1}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${c.raw}% complete`}}},
-      scales:{x:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
+      scales:{x:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>Number.isInteger(v)?v+'%':''},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
               y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
-  setTimeout(()=>applySmooth('chartGoal','x'),50);
+  setTimeout(()=>{applySmooth('chartGoal','x');setChartLimits('chartGoal',{yMin:0,yMax:105});},50);
 }
 
 // ── COMPARE CHART ─────────────────────────────────────────────
@@ -2687,12 +2704,12 @@ function renderCompareChart(){
       plugins:{
         legend:{display:true,labels:{color:TC,font:CF,boxWidth:10,padding:12}},
         tooltip:tooltipDefaults(),
-        zoom:makeZoom()
+        zoom:makeZoom('xy')
       },
       scales
     }
   });
-  setTimeout(()=>applySmooth('chartCompare','xy'),50);
+  setTimeout(()=>{applySmooth('chartCompare','xy');setChartLimits('chartCompare',{yMin:0});},50);
 }
 
 // ── YEAR HEATMAP ──────────────────────────────────────────────
@@ -2885,7 +2902,7 @@ function renderSparklineChart(){
       plugins:{legend:{display:datasets.length>1,labels:{color:TC,font:CF,boxWidth:10,padding:10}},
         tooltip:tooltipDefaults(),zoom:makeZoom('x')},
       scales}});
-  setTimeout(()=>applySmooth('chartSparkline','x'),50);
+  setTimeout(()=>{applySmooth('chartSparkline','x');setChartLimits('chartSparkline',{yMin:0});},50);
 }
 
 // ── CUSTOM CORRELATION ────────────────────────────────────────
@@ -3010,7 +3027,7 @@ function renderCorrDetail(){
           yA:{position:'left',ticks:{color:aColor,font:CF,maxTicksLimit:5},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
           yB:{position:'right',ticks:{color:bColor,font:CF,maxTicksLimit:5},grid:{color:'transparent'},border:{color:'rgba(0,210,255,0.08)'}}
         }}});
-  setTimeout(()=>applySmooth('chartCorrDetail','x'),50);
+  setTimeout(()=>{applySmooth('chartCorrDetail','x');},50);
   }else{
     // Scatter + r
     const points=days.map(d=>{
@@ -3026,7 +3043,7 @@ function renderCorrDetail(){
           x:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:hA.name,color:TC,font:CF}},
           y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:hB.name,color:TC,font:CF}}
         }}});
-  setTimeout(()=>applySmooth('chartCorrDetail','xy'),50);
+  setTimeout(()=>{applySmooth('chartCorrDetail','xy');setChartLimits('chartCorrDetail',{yMin:0});},50);
   }
 }
 
@@ -3071,8 +3088,8 @@ function renderGoalTimeChart(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`Progress: ${c.raw}%`}},zoom:makeZoom('x')},
       scales:{x:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
-        y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
-  setTimeout(()=>applySmooth('chartGoalTime','x'),50);
+        y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>Number.isInteger(Math.round(v))?Math.round(v)+'%':''},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
+  setTimeout(()=>{applySmooth('chartGoalTime','x');setChartLimits('chartGoalTime',{yMin:0,yMax:105});},50);
 }
 
 // Log goal progress snapshot when it changes
