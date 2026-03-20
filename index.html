@@ -2205,7 +2205,10 @@ function applySmooth(chartId, mode='x'){
   let isDragging=false, lastX=0, lastY=0;
   let velX=0, velY=0, rafId=null;
 
-  function getChart(){return charts[chartId];}
+  function isLinearX(xScale){
+    return xScale&&(xScale.type==='linear'||xScale.type==='time'||xScale._chartType==='linear'||
+      (xScale.type!=='category'&&typeof xScale.min==='number'&&typeof xScale.max==='number'));
+  }
   function getLimits(){return chartLimits[chartId]||{};}
 
   function clampScale(sc,newMin,newMax,floorMin,ceilMax){
@@ -2227,11 +2230,11 @@ function applySmooth(chartId, mode='x'){
     const lim=getLimits();
     // X axis — only if numeric (not categorical)
     const xScale=ch.scales.x;
-    if(xScale&&(mode==='x'||mode==='xy')&&xScale.type!=='category'){
+    if(xScale&&(mode==='x'||mode==='xy')&&isLinearX(xScale)){
       const range=xScale.max-xScale.min;
       const shift=dx*(range/ch.width);
       clampScale(xScale,xScale.min-shift,xScale.max-shift,lim.xMin,lim.xMax);
-    }else if(xScale&&(xScale.type==='category'||(!xScale.type&&xScale.ticks?.length))&&(mode==='x'||mode==='xy')){
+    }else if(xScale&&!isLinearX(xScale)&&(mode==='x'||mode==='xy')){
       // Categorical x: pan by shifting visible range
       const total=(xScale.ticks?.length||xScale.max)||10;
       const visible=(xScale.max-xScale.min)||total;
@@ -2258,7 +2261,7 @@ function applySmooth(chartId, mode='x'){
     const ch=getChart();if(!ch)return;
     const lim=getLimits();
     const xScale=ch.scales.x;
-    if(xScale&&(mode==='x'||mode==='xy')&&xScale.type!=='category'){
+    if(xScale&&(mode==='x'||mode==='xy')&&isLinearX(xScale)){
       const range=xScale.max-xScale.min;
       const newRange=range*factor;
       const pivot=xScale.min+range*mouseXRatio;
@@ -2696,8 +2699,8 @@ function renderCompareChart(){
       border:{color:'rgba(0,210,255,0.08)'},
       ticks:{color,font:CF,maxTicksLimit:5,
         callback:habitIsTime(h)
-          ?v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}
-          :v=>{const r=Math.round(v*10)/10;return Number.isInteger(r*10)?r+(h.unit?' '+h.unit:''):'';}
+          ?v=>{if(v%1!==0&&v%5!==0)return'';const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}
+          :v=>{const r=Math.round(v*10)/10;const clean=Number.isInteger(r)?r:Number.isInteger(r*10)?r:null;return clean!==null?clean+(h.unit?' '+h.unit:''):'';}
       }
     };
     return{
@@ -2725,9 +2728,15 @@ function renderCompareChart(){
     }
   });
   setTimeout(()=>{
+    // For scatter charts Chart.js may report x type differently — force xy mode
+    // and override the type check by patching the scale after creation
+    const ch=charts['chartCompare'];
+    if(ch&&ch.scales.x){
+      ch.scales.x._chartType='linear'; // mark it so applySmooth treats it as linear
+    }
     applySmooth('chartCompare','xy');
-    setChartLimits('chartCompare',{xMin:0,xMax:labels.length-1,yMin:0});
-  },50);
+    setChartLimits('chartCompare',{xMin:-0.5,xMax:labels.length-0.5,yMin:0});
+  },80);
 }
 
 // ── YEAR HEATMAP ──────────────────────────────────────────────
