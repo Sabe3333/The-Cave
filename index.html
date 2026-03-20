@@ -277,7 +277,7 @@ select.input{cursor:pointer;}
 .row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
 /* DASHBOARD */
-.today-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.today-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 .quick-habit{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
 .quick-habit:hover{padding-left:4px;}
 .quick-habit:last-child{border-bottom:none;}
@@ -444,7 +444,7 @@ select.input{cursor:pointer;}
 
 @media(max-width:700px){
   .stats-row,.cat-scores-row{grid-template-columns:repeat(2,1fr);}
-  .today-grid,.charts-grid{grid-template-columns:1fr;}
+  .today-grid{grid-template-columns:1fr;}.charts-grid{grid-template-columns:1fr;}
   .chart-card.full{grid-column:1;}
   main{padding:12px;}
   header{padding:0 12px;}
@@ -459,6 +459,94 @@ select.input{cursor:pointer;}
   .section-title{font-size:17px;letter-spacing:3px;}
   .score-big{font-size:44px;}
 }
+
+/* EXPANDABLE HABIT LOG PANEL */
+.habit-expand{overflow:hidden;max-height:0;transition:max-height 0.28s ease;background:rgba(0,0,0,0.18);border-top:1px solid transparent;}
+.habit-expand.open{max-height:400px;border-top-color:var(--border);}
+.expand-inner{padding:12px 14px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+.expand-field{display:flex;flex-direction:column;gap:4px;min-width:80px;}
+.expand-label{font-size:8px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;}
+.expand-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:600;}
+.expand-controls{display:flex;align-items:center;gap:5px;}
+
+/* HABIT EXPAND TOGGLE */
+.habit-expand-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:10px;padding:2px 6px;transition:color 0.15s;flex-shrink:0;letter-spacing:1px;}
+.habit-expand-btn:hover{color:var(--accent);}
+.habit-expand-btn.open{color:var(--accent);}
+
+/* EDIT BUTTONS */
+.edit-btn{background:transparent;border:1px solid var(--border);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;padding:2px 7px;cursor:pointer;transition:all 0.15s;clip-path:polygon(3px 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 3px);}
+.edit-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* DASHBOARD YESTERDAY SUMMARY */
+.yesterday-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.yesterday-row:last-child{border-bottom:none;}
+.yest-name{font-size:10px;color:var(--text);letter-spacing:1px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.yest-val{font-family:'Orbitron',monospace;font-size:11px;font-weight:600;flex-shrink:0;}
+.yest-avg{font-size:8px;color:var(--text3);letter-spacing:1px;flex-shrink:0;}
+.yest-delta{font-size:9px;flex-shrink:0;font-weight:bold;}
+
+/* TOP STREAKS PANEL */
+.streak-list{display:flex;flex-direction:column;gap:4px;}
+.streak-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;}
+.streak-row:last-child{border-bottom:none;}
+.streak-row:hover{background:rgba(0,210,255,0.03);}
+.streak-rank{font-size:8px;color:var(--text3);width:14px;flex-shrink:0;}
+.streak-name{font-size:10px;color:var(--text);flex:1;letter-spacing:1px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.streak-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.streak-highlight{color:var(--accent2);text-shadow:0 0 8px rgba(0,255,157,0.4);}
+
+/* WEEK MINI HEATMAP */
+.week-mini{display:flex;gap:4px;margin-top:8px;}
+.week-mini-col{display:flex;flex-direction:column;gap:3px;align-items:center;}
+.week-mini-label{font-size:7px;color:var(--text3);letter-spacing:0.5px;}
+.week-mini-cell{width:12px;height:12px;background:var(--text3);border-radius:2px;transition:all 0.2s;position:relative;}
+.week-mini-cell.done{box-shadow:0 0 4px currentColor;}
+.week-mini-cell:hover{transform:scale(1.3);z-index:2;}
+
+/* PER-HABIT SPARKLINE */
+.sparkline-selector{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+.sparkline-habit-btn{padding:4px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);cursor:pointer;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);transition:all 0.15s;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);}
+.sparkline-habit-btn:hover{border-color:var(--border2);}
+.sparkline-habit-btn.active{color:#000;}
+.sparkline-metric-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.metric-toggle{padding:3px 8px;background:rgba(0,0,0,0.3);border:1px solid var(--border);cursor:pointer;font-size:8px;letter-spacing:1px;color:var(--text2);transition:all 0.15s;clip-path:polygon(3px 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 3px);}
+.metric-toggle.active{background:rgba(0,210,255,0.1);border-color:var(--accent);color:var(--accent);}
+
+/* CUSTOM CORRELATION PANEL */
+.corr-panel-view{display:flex;flex-direction:column;gap:0;}
+.corr-pair-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;}
+.corr-pair-row:last-child{border-bottom:none;}
+.corr-pair-row:hover{background:rgba(0,210,255,0.03);}
+.corr-pair-names{flex:1;font-size:10px;color:var(--text);letter-spacing:1px;}
+.corr-pair-names span{color:var(--text2);}
+.corr-pair-bar-wrap{width:60px;height:3px;background:var(--text3);overflow:hidden;flex-shrink:0;}
+.corr-pair-bar-fill{height:100%;}
+.corr-pair-pct{font-family:'Orbitron',monospace;font-size:11px;width:36px;text-align:right;flex-shrink:0;}
+.corr-detail-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.corr-back-btn{background:none;border:1px solid var(--border2);color:var(--text2);font-size:10px;padding:4px 10px;cursor:pointer;transition:all 0.15s;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);}
+.corr-back-btn:hover{border-color:var(--accent);color:var(--accent);}
+.corr-view-nav{display:flex;gap:4px;align-items:center;margin-left:auto;}
+.corr-view-btn{background:var(--text3);border:1px solid var(--border);color:var(--text2);width:20px;height:20px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;clip-path:polygon(3px 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 3px);}
+.corr-view-btn:hover{background:var(--accent);color:#000;}
+.corr-view-label{font-size:8px;color:var(--text2);letter-spacing:1px;min-width:60px;text-align:center;}
+
+/* GOAL PROGRESS OVER TIME */
+.goal-selector{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.goal-sel-btn{padding:4px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);cursor:pointer;font-size:9px;letter-spacing:1px;color:var(--text2);transition:all 0.15s;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);}
+.goal-sel-btn:hover{border-color:var(--border2);}
+.goal-sel-btn.active{background:rgba(255,184,0,0.1);border-color:var(--warn);color:var(--warn);}
+
+/* MILESTONE */
+.milestone-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.milestone-row:last-child{border-bottom:none;}
+.milestone-check{width:14px;height:14px;border:1px solid var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;clip-path:polygon(3px 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 3px);transition:all 0.15s;}
+.milestone-check.done{background:var(--accent2);border-color:var(--accent2);box-shadow:0 0 6px rgba(0,255,157,0.3);}
+.milestone-name{flex:1;font-size:10px;color:var(--text);letter-spacing:1px;}
+.milestone-name.done{color:var(--text2);text-decoration:line-through;}
+.milestone-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;transition:color 0.15s;}
+.milestone-del:hover{color:var(--red);}
+.add-milestone-row{display:flex;gap:6px;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -514,8 +602,30 @@ select.input{cursor:pointer;}
     <div class="stat-card"><div class="loading"><div class="spinner"></div></div></div>
   </div>
   <div class="today-grid">
-    <div class="panel"><div class="panel-label">Today's Habits</div><div id="dashHabits"><div class="loading"><div class="spinner"></div></div></div></div>
-    <div class="panel"><div class="panel-label">Active Goals</div><div id="dashGoals"><div class="loading"><div class="spinner"></div></div></div></div>
+    <div class="panel">
+      <div class="panel-label">Today's Habits</div>
+      <div id="dashHabits"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="panel">
+        <div class="panel-label">Yesterday's Performance</div>
+        <div id="dashYesterday"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="cursor:pointer;" onclick="toggleStreakDetail()">
+          Top Streaks <span id="streakDetailLabel" style="color:var(--text3);font-size:8px;letter-spacing:1px;margin-left:6px;">click to inspect</span>
+        </div>
+        <div id="dashStreaks"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Active Goals</div>
+      <div id="dashGoals"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:12px;">
+    <div class="panel-label">This Week</div>
+    <div id="dashWeekHeatmap"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 </div>
 
@@ -574,6 +684,8 @@ select.input{cursor:pointer;}
     <button class="btn-ghost" onclick="setPeriod('3months',this)">3 Months</button>
     <button class="btn-ghost" onclick="setPeriod('all',this)">All Time</button>
   </div>
+
+  <!-- SCORE OVER TIME -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card full">
       <div class="chart-title"><span class="chart-title-text">Discipline Score Over Time</span><button class="reset-zoom-btn" onclick="resetZoom('chartScore')">Reset</button></div>
@@ -581,6 +693,37 @@ select.input{cursor:pointer;}
       <div class="chart-hint">scroll to zoom · drag to pan</div>
     </div>
   </div>
+
+  <!-- PER-HABIT SPARKLINE — new -->
+  <div class="charts-grid" style="margin-bottom:10px;">
+    <div class="chart-card full">
+      <div class="chart-title"><span class="chart-title-text">Habit Deep Dive</span><button class="reset-zoom-btn" onclick="resetZoom('chartSparkline')">Reset</button></div>
+      <div class="sparkline-selector" id="sparklineHabitBtns"></div>
+      <div class="sparkline-metric-row" id="sparklineMetricBtns"></div>
+      <div class="chart-wrap-lg"><canvas id="chartSparkline"></canvas></div>
+      <div class="chart-hint">pick a habit · pick metrics · scroll zoom · drag pan</div>
+    </div>
+  </div>
+
+  <!-- CUSTOM CORRELATION — new -->
+  <div class="charts-grid" style="margin-bottom:10px;">
+    <div class="chart-card full">
+      <div class="chart-title"><span class="chart-title-text">Custom Correlations</span><button class="btn-ghost" onclick="openAddCorr()" style="font-size:9px;padding:3px 10px;">+ Add Pair</button></div>
+      <div id="corrPanel"></div>
+    </div>
+  </div>
+
+  <!-- GOAL PROGRESS OVER TIME — new -->
+  <div class="charts-grid" style="margin-bottom:10px;">
+    <div class="chart-card full">
+      <div class="chart-title"><span class="chart-title-text">Goal Progress Over Time</span><button class="reset-zoom-btn" onclick="resetZoom('chartGoalTime')">Reset</button></div>
+      <div class="goal-selector" id="goalTimeBtns"></div>
+      <div class="chart-wrap-lg"><canvas id="chartGoalTime"></canvas></div>
+      <div class="chart-hint">scroll zoom · drag pan</div>
+    </div>
+  </div>
+
+  <!-- CONSISTENCY + DAY OF WEEK -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card">
       <div class="chart-title"><span class="chart-title-text">Consistency Index</span></div>
@@ -592,25 +735,21 @@ select.input{cursor:pointer;}
       <div class="chart-title"><span class="chart-title-text">Best Day of Week</span></div>
       <div class="insight-sub">Which days you execute vs drop off.</div>
       <div class="chart-wrap-md"><canvas id="chartDayOfWeek"></canvas></div>
+      <div id="dowDetail" style="margin-top:8px;font-size:9px;"></div>
     </div>
   </div>
+
+  <!-- HABIT COMPLETION + WEAKEST -->
   <div class="charts-grid" style="margin-bottom:10px;">
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Motivation vs Performance</span><button class="reset-zoom-btn" onclick="resetZoom('chartMotPerf')">Reset</button></div>
-      <div class="insight-sub">Does how you feel affect what you do?</div>
-      <div class="chart-wrap-md"><canvas id="chartMotPerf"></canvas></div>
-      <div class="chart-hint">scroll to zoom · drag to pan (xy)</div>
-    </div>
     <div class="chart-card">
       <div class="chart-title"><span class="chart-title-text">Habit Completion</span><button class="reset-zoom-btn" onclick="resetZoom('chartHabit')">Reset</button></div>
       <div class="chart-wrap-md"><canvas id="chartHabit"></canvas></div>
       <div class="chart-hint">scroll to zoom · drag to pan</div>
     </div>
-  </div>
-  <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Weakest Links</span></div><div class="insight-sub">Habits with most missed days.</div><div id="weakestLinks" style="margin-top:4px;"></div></div>
-    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Habit Anchors</span></div><div class="insight-sub">When you do A, how often do you also do B?</div><div id="habitCorrelation" style="margin-top:4px;overflow-y:auto;max-height:220px;"></div></div>
   </div>
+
+  <!-- MOTIVATION TREND -->
   <div class="charts-grid" style="margin-bottom:10px;">
     <div class="chart-card">
       <div class="chart-title"><span class="chart-title-text">Motivation Trend</span><button class="reset-zoom-btn" onclick="resetZoom('chartMot')">Reset</button></div>
@@ -619,6 +758,8 @@ select.input{cursor:pointer;}
     </div>
     <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Goal Progress</span></div><div class="chart-wrap-md"><canvas id="chartGoal"></canvas></div></div>
   </div>
+
+  <!-- COMPARE -->
   <div class="compare-panel">
     <div class="compare-title">Compare Habits</div>
     <div class="habit-select-grid" id="compareChips"></div>
@@ -720,6 +861,89 @@ select.input{cursor:pointer;}
   </div>
 </div>
 
+
+<!-- EDIT HABIT MODAL -->
+<div class="modal-overlay" id="editHabitModal">
+  <div class="modal">
+    <div class="modal-title">Edit Habit</div>
+    <input type="hidden" id="editHabitId">
+    <div class="modal-section">
+      <div class="modal-label">Name</div>
+      <input class="input" id="editHabitName" style="margin-bottom:0;">
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Category</div>
+      <div class="cat-grid" id="editCatPicker"></div>
+      <input class="input" id="editCustomCat" placeholder="// custom category" style="display:none;margin-top:6px;margin-bottom:0;">
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Color</div>
+      <div class="color-row" id="editColorPicker"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="saveEditHabit()"><span>Save</span></button>
+      <button class="btn-ghost" onclick="closeModal('editHabitModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT GOAL MODAL -->
+<div class="modal-overlay" id="editGoalModal">
+  <div class="modal">
+    <div class="modal-title">Edit Goal</div>
+    <input type="hidden" id="editGoalId">
+    <div class="modal-label">Name</div>
+    <input class="input" id="editGoalName">
+    <div class="modal-label">Deadline</div>
+    <input class="input" id="editGoalDeadline" type="date">
+    <div class="modal-label" style="margin-top:8px;">Milestones</div>
+    <div id="editMilestones" style="margin-bottom:8px;"></div>
+    <div class="add-milestone-row">
+      <input class="input" id="newMilestoneInput" placeholder="// add milestone..." style="margin-bottom:0;flex:1;">
+      <button class="btn-ghost" onclick="addMilestone()">+ Add</button>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn" onclick="saveEditGoal()"><span>Save</span></button>
+      <button class="btn-ghost" onclick="closeModal('editGoalModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT JOURNAL MODAL -->
+<div class="modal-overlay" id="editJournalModal">
+  <div class="modal">
+    <div class="modal-title">Edit Entry</div>
+    <input type="hidden" id="editJournalId">
+    <div class="mot-slider-wrap">
+      <div class="mot-slider-label">
+        <span>Motivation</span>
+        <span class="mot-value" id="editMotDisplay">5</span>
+      </div>
+      <input type="range" min="1" max="10" value="5" id="editMotSlider" oninput="document.getElementById('editMotDisplay').textContent=this.value;document.getElementById('editMotDisplay').style.color=this.value>=8?'var(--accent2)':this.value>=5?'var(--warn)':'var(--red)'">
+    </div>
+    <textarea class="input" id="editJournalText" style="height:120px;"></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="saveEditJournal()"><span>Save</span></button>
+      <button class="btn-ghost" onclick="closeModal('editJournalModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CORRELATION PAIR MODAL -->
+<div class="modal-overlay" id="addCorrModal">
+  <div class="modal">
+    <div class="modal-title">Add Correlation Pair</div>
+    <div class="modal-label">Habit A</div>
+    <select class="input" id="corrHabitA"></select>
+    <div class="modal-label">Habit B</div>
+    <select class="input" id="corrHabitB"></select>
+    <div class="modal-actions">
+      <button class="btn" onclick="saveAddCorr()"><span>Add</span></button>
+      <button class="btn-ghost" onclick="closeModal('addCorrModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- end #app -->
 
 <script>
@@ -770,6 +994,15 @@ let charts={};
 let compareSelected=[];
 let nudgeDismissed=false;
 let selectedType='checkbox',selectedCategory='General',selectedColor='#00d2ff';
+let milestones=[];
+let goalLog=[];
+let corrPairs=JSON.parse(localStorage.getItem('cave_corr_pairs')||'[]');
+let corrDetailIdx=null; // which pair is being viewed
+let corrDetailView=0;   // 0=lines, 1=scatter+r
+let sparklineHabitId=null;
+let sparklineMetrics=new Set();
+let selectedGoalTimeId=null;
+let streakDetailMode=false;
 
 const PRESETS=[
   {name:'Body',color:'#00ff9d'},{name:'Mind',color:'#7b61ff'},
@@ -819,14 +1052,16 @@ async function loadAll(){
   setSyncStatus('syncing');
   try{
     const cutoff=subDays(400);
-    const[hR,hlR,gR,jR,nR]=await Promise.all([
+    const[hR,hlR,gR,jR,nR,mR,glR]=await Promise.all([
       sb.from('habits').select('*').order('id'),
       sb.from('habit_log').select('*').gte('date',cutoff),
       sb.from('goals').select('*').order('id'),
       sb.from('journal').select('*').order('created_at',{ascending:false}),
-      sb.from('notes').select('*').order('created_at',{ascending:false})
+      sb.from('notes').select('*').order('created_at',{ascending:false}),
+      sb.from('milestones').select('*').order('created_at',{ascending:true}),
+      sb.from('goal_log').select('*').order('logged_at',{ascending:true})
     ]);
-    habits=hR.data||[];goals=gR.data||[];journal=jR.data||[];notes=nR.data||[];
+    habits=hR.data||[];goals=gR.data||[];journal=jR.data||[];notes=nR.data||[];milestones=mR.data||[];goalLog=glR.data||[];
     habitLog={};
     for(const r of(hlR.data||[])){
       if(!habitLog[r.date])habitLog[r.date]={};
@@ -864,6 +1099,10 @@ function initHabitModal(){
   });
   document.getElementById('quantityFields').style.display='none';
   document.getElementById('timeFields').style.display='none';
+  document.getElementById('habitUnit').value='';
+  document.getElementById('habitTarget').value='';
+  document.getElementById('habitTimeLabel').value='';
+  document.getElementById('habitNameInput').value='';
   const cp=document.getElementById('catPicker');
   cp.innerHTML=PRESETS.map(p=>`<div class="cat-opt${p.name==='General'?' selected':''}" data-cat="${p.name}" style="${p.name==='General'?`background:${p.color};border-color:${p.color};color:#000;`:''}" onclick="selectCat('${p.name}','${p.color}',this)">${p.name}</div>`).join('')
     +`<div class="cat-opt custom-cat-opt" onclick="selectCat('custom','',this)">+ Custom</div>`;
@@ -897,8 +1136,18 @@ function toggleType(type,el){
   // Show/hide extra fields
   const hasNumeric=[...selectedTypes].some(t=>numericTypes.has(t));
   const hasTime=selectedTypes.has('time');
-  document.getElementById('quantityFields').style.display=hasNumeric?'block':'none';
+  const hasRating=selectedTypes.has('rating');
+  document.getElementById('quantityFields').style.display=(hasNumeric||hasRating)?'block':'none';
   document.getElementById('timeFields').style.display=hasTime?'block':'none';
+  // Update quantity label based on type
+  const qLabel=document.querySelector('#quantityFields .modal-label');
+  if(qLabel){
+    if(hasNumeric&&hasRating)qLabel.textContent='Quantity / Rating Settings';
+    else if(selectedTypes.has('duration'))qLabel.textContent='Duration Settings';
+    else if(selectedTypes.has('distance'))qLabel.textContent='Distance Settings';
+    else if(hasRating)qLabel.textContent='Rating Settings';
+    else qLabel.textContent='Quantity Settings';
+  }
 }
 function selectCat(name,color,el){
   if(name==='custom'){document.getElementById('customCatInput').style.display='block';selectedCategory='';document.querySelectorAll('.cat-opt').forEach(o=>{o.classList.remove('selected');o.style.background='';o.style.borderColor='';o.style.color='';});el.classList.add('selected');return;}
@@ -1123,6 +1372,7 @@ function renderHabits(){
           ${hasBoth?logHtml:''}
           ${valDisplay?`<div class="log-val-display" style="color:${color}">${valDisplay}</div>`:''}
           <div class="habit-streak">${streak>0?`${streak}D`:'—'}</div>
+          <button class="edit-btn" onclick="event.stopPropagation();openEditHabit(${h.id})" style="margin-right:2px;">✎</button>
           <button class="habit-delete" onclick="event.stopPropagation();deleteHabit(${h.id})">×</button>
         </div>
         <div class="week-row-wrap">
@@ -1146,7 +1396,9 @@ async function saveGoal(){
 async function updateGoalProgress(id,delta){
   const g=goals.find(g=>g.id===id);if(!g)return;
   g.progress=Math.min(100,Math.max(0,g.progress+delta));setSyncStatus('syncing');
-  await sb.from('goals').update({progress:g.progress}).eq('id',id);setSyncStatus('ok');render();
+  await sb.from('goals').update({progress:g.progress}).eq('id',id);
+  await logGoalProgress(id,g.progress);
+  setSyncStatus('ok');render();
 }
 async function deleteGoal(id){
   const g=goals.find(g=>g.id===id);
@@ -1172,10 +1424,12 @@ function renderGoals(){
       <div class="goal-header">
         <div><div class="goal-name">${g.name}${urgency}</div>${dl?`<div style="margin-top:2px">${dl}</div>`:''}</div>
         <div style="display:flex;gap:8px;align-items:center;">
+          <button class="edit-btn" onclick="openEditGoal(${g.id})" style="margin-right:2px;">✎</button>
           <button class="habit-delete" onclick="deleteGoal(${g.id})">×</button>
         </div>
       </div>
       <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:${g.progress}%"></div></div>
+      ${milestones.filter(m=>m.goal_id===g.id).length?`<div style="margin:6px 0 4px;display:flex;flex-wrap:wrap;gap:4px;">${milestones.filter(m=>m.goal_id===g.id).map(m=>`<span style="font-size:8px;letter-spacing:1px;padding:2px 7px;border:1px solid ${m.done?'var(--accent2)':'var(--border)'};color:${m.done?'var(--accent2)':'var(--text3)'};clip-path:polygon(3px 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 3px);">${m.done?'✓ ':''}${m.name}</span>`).join('')}</div>`:''}
       <div class="goal-footer">
         <div class="goal-pct">${g.progress}%</div>
         <div class="progress-controls">
@@ -1195,6 +1449,7 @@ async function setGoalProgress(id,val){
   g.progress=Math.min(100,Math.max(0,isNaN(val)?g.progress:val));
   setSyncStatus('syncing');
   await sb.from('goals').update({progress:g.progress}).eq('id',id);
+  await logGoalProgress(id,g.progress);
   setSyncStatus('ok');render();
 }
 
@@ -1230,6 +1485,7 @@ function renderJournal(){
   el.innerHTML=journal.map(j=>`<div class="journal-entry">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <div class="journal-date">${formatDate(j.date)}</div>
+      <button class="edit-btn" onclick="openEditJournal(${j.id})" style="margin-right:4px;">✎</button>
       <button class="habit-delete" onclick="deleteJournal(${j.id})">×</button>
     </div>
     <div class="journal-text">${j.text}</div>
@@ -1261,19 +1517,24 @@ function renderDashboard(){
   let best=0;habits.forEach(h=>{const s=getStreak(h);if(s>best)best=s;});
   const pct=total?Math.round(done/total*100):0;
 
+  const todayScore=calcScore(td,td).overall;
   document.getElementById('statsRow').innerHTML=`
-    <div class="stat-card"><div class="stat-num" id="sn0">0%</div><div class="stat-label">Today</div></div>
-    <div class="stat-card"><div class="stat-num green" id="sn1">0</div><div class="stat-label">Best Streak</div></div>
+    <div class="stat-card"><div class="stat-num" id="sn0">0%</div><div class="stat-label">Today Habits</div></div>
+    <div class="stat-card"><div class="stat-num green" id="sn1">0</div><div class="stat-label">Today Score</div></div>
     <div class="stat-card"><div class="stat-num purple" id="sn2">0</div><div class="stat-label">Active Goals</div></div>
     <div class="stat-card"><div class="stat-num warn" id="sn3">0%</div><div class="stat-label">Avg Goal</div></div>`;
 
-  // Animate each counter
   requestAnimationFrame(()=>{
     animateCount(document.getElementById('sn0'),pct,'%');
-    animateCount(document.getElementById('sn1'),best,'',400);
+    animateCount(document.getElementById('sn1'),todayScore,'',400);
     animateCount(document.getElementById('sn2'),active,'',400);
     animateCount(document.getElementById('sn3'),avgP,'%');
   });
+
+  // New dashboard panels
+  renderYesterday();
+  renderStreaks();
+  renderWeekHeatmap();
 
   // Daily nudge
   const nudgeEl=document.getElementById('nudgeBanner');
@@ -1307,22 +1568,165 @@ function renderDashboard(){
       <div class="goal-progress-bar"><div class="goal-progress-fill" style="width:${g.progress}%"></div></div>
     </div>`).join('');
 }
-async function toggleHabitDash(id){const h=habits.find(h=>h.id===id);if(!h||h.type!=='checkbox')return;await toggleHabit(id);}
+async function toggleHabitDash(id){const h=habits.find(h=>h.id===id);if(!h||!habitIsCheckbox(h))return;await toggleHabit(id);}
 
-// ── SCORE ─────────────────────────────────────────────────────
+function renderYesterday(){
+  const el=document.getElementById('dashYesterday');
+  if(!el)return;
+  const yd=subDays(1);
+  if(!habits.length){el.innerHTML='<div style="color:var(--text3);font-size:10px;letter-spacing:1px;">No habits yet.</div>';return;}
+  // Get all logged dates to compute averages
+  const allDates=Object.keys(habitLog).sort();
+  el.innerHTML=habits.map(h=>{
+    const color=h.color||getCatColor(h.category||'General');
+    const val=getHabitValue(h.id,yd);
+    const done=isHabitDone(h.id,yd);
+    const score=scoreHabitDay(h,yd);
+    // Compute personal average for this habit
+    const loggedVals=allDates.map(d=>getHabitValue(h.id,d)).filter(v=>v!==null&&v!=='0');
+    let avgStr='';
+    if(loggedVals.length>1&&habitIsNumeric(h)){
+      const nums=loggedVals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+      if(nums.length){
+        const avg=nums.reduce((a,b)=>a+b,0)/nums.length;
+        const cur=val?parseFloat(val):0;
+        const delta=cur-avg;
+        const sign=delta>=0?'+':'';
+        avgStr=`<span class="yest-avg">avg ${Math.round(avg*10)/10}</span>
+          <span class="yest-delta" style="color:${delta>=0?'var(--accent2)':'var(--red)'}">${sign}${Math.round(delta*10)/10}</span>`;
+      }
+    }
+    const dispVal=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`:habitIsTime(h)&&val?val:done?'✓':'—';
+    const scoreColor=score>=80?'var(--accent2)':score>=50?'var(--warn)':'var(--red)';
+    return`<div class="yesterday-row">
+      <div class="yest-name" style="color:${color}">${h.name}</div>
+      <span class="yest-val" style="color:${scoreColor}">${dispVal}</span>
+      ${avgStr}
+    </div>`;
+  }).join('');
+}
+
+function renderStreaks(){
+  const el=document.getElementById('dashStreaks');
+  if(!el)return;
+  const streakData=habits.map(h=>({h,s:getStreak(h)})).sort((a,b)=>b.s-a.s).slice(0,5);
+  if(!streakData.length){el.innerHTML='<div style="color:var(--text3);font-size:10px;letter-spacing:1px;">No habits yet.</div>';return;}
+  el.innerHTML=`<div class="streak-list">${streakData.map(({h,s},i)=>{
+    const color=h.color||getCatColor(h.category||'General');
+    return`<div class="streak-row" onclick="showStreakDetail(${h.id})">
+      <div class="streak-rank">#${i+1}</div>
+      <div class="streak-name" style="color:${color}">${h.name}</div>
+      <div class="streak-val ${i===0?'streak-highlight':''}" style="${i===0?'':` color:${color}`}">${s}D</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function showStreakDetail(id){
+  const h=habits.find(h=>h.id===id);
+  if(!h)return;
+  const label=document.getElementById('streakDetailLabel');
+  if(label)label.textContent=`// ${h.name}: ${getStreak(h)}D streak`;
+}
+
+function toggleStreakDetail(){
+  const label=document.getElementById('streakDetailLabel');
+  if(label)label.textContent='click to inspect';
+}
+
+function renderWeekHeatmap(){
+  const el=document.getElementById('dashWeekHeatmap');
+  if(!el)return;
+  const days7=Array.from({length:7},(_,i)=>subDays(6-i));
+  const dayLabels=days7.map(d=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'}).slice(0,1));
+  const td=today();
+  el.innerHTML=`<div class="week-mini">${habits.slice(0,12).map(h=>{
+    const color=h.color||getCatColor(h.category||'General');
+    return`<div style="flex:1;min-width:0;">
+      <div style="font-size:7px;color:var(--text3);letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;">${h.name.slice(0,6)}</div>
+      <div style="display:flex;gap:2px;">${days7.map((d,i)=>{
+        const score=scoreHabitDay(h,d);
+        const opacity=score>0?(0.15+score/100*0.85):0.08;
+        return`<div style="flex:1;height:14px;background:${score>0?color:'var(--text3)'};opacity:${opacity};border-radius:2px;position:relative;"
+          title="${dayLabels[i]}: ${score>0?score+'%':'—'}"></div>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('')}</div>
+  <div style="display:flex;gap:0;margin-top:4px;padding-left:0;">${days7.map((d,i)=>`<div style="flex:1;text-align:center;font-size:7px;color:${d===td?'var(--accent)':'var(--text3)'};letter-spacing:0.5px;">${dayLabels[i]}</div>`).join('')}</div>`;
+}
+
+// ── SCORE (new model — all habit types count) ─────────────────
+function scoreHabitDay(h,date){
+  // Returns 0-100 for this habit on this date
+  const val=getHabitValue(h.id,date);
+  const types=h.type?h.type.split(','):['checkbox'];
+
+  if(types.includes('checkbox')){
+    if(!isHabitDone(h.id,date))return 0;
+    // If also has numeric/duration/rating, checkbox = 30% of score, metric = 70%
+    if(types.some(t=>['quantity','duration','distance','rating'].includes(t))){
+      const numScore=scoreNumeric(h,val);
+      return Math.round(30+numScore*0.7);
+    }
+    if(types.includes('time')){
+      const timeScore=scoreWakeTime(h,val);
+      return Math.round(30+timeScore*0.7);
+    }
+    return 100; // pure checkbox, done = 100
+  }
+  if(types.some(t=>['quantity','duration','distance','rating'].includes(t))){
+    if(!val)return 0;
+    return scoreNumeric(h,val);
+  }
+  if(types.includes('time')){
+    if(!val)return 0;
+    return scoreWakeTime(h,val);
+  }
+  return isHabitDone(h.id,date)?100:0;
+}
+
+function scoreNumeric(h,val){
+  if(!val)return 0;
+  const v=parseFloat(val);
+  if(!h.target)return v>0?70:0; // no target, logged=70
+  const pct=v/parseFloat(h.target);
+  return Math.min(100,Math.round(pct*100));
+}
+
+function scoreWakeTime(h,val){
+  if(!val||!h.target)return val?50:0;
+  // target is stored as time string e.g. "06:00"
+  const [th,tm]=h.target.toString().split(':').map(Number);
+  const [vh,vm]=val.split(':').map(Number);
+  const targetMins=th*60+(tm||0);
+  const actualMins=vh*60+vm;
+  const diffMins=actualMins-targetMins; // positive = woke up later
+  if(diffMins<=0)return 100; // on time or early
+  if(diffMins<=30)return 90;
+  if(diffMins<=60)return 70;
+  if(diffMins<=90)return 50;
+  if(diffMins<=120)return 30;
+  if(diffMins<=180)return 10;
+  return 0;
+}
+
 function calcScore(fromDate,toDate){
   const days=getDaysInRange(fromDate,toDate);
-  const cbH=habits.filter(habitIsCheckbox);
+  if(!days.length)return{overall:0,habitScore:0,motScore:50,goalScore:0,motHasData:false};
+
+  // Habit score: average of all habit day scores
   let habitScore=0;
-  if(cbH.length){
-    const c=days.map(d=>cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length);
-    habitScore=c.reduce((a,b)=>a+b,0)/days.length*100;
+  if(habits.length){
+    const dayScores=days.map(d=>{
+      const scores=habits.map(h=>scoreHabitDay(h,d));
+      return scores.reduce((a,b)=>a+b,0)/scores.length;
+    });
+    habitScore=dayScores.reduce((a,b)=>a+b,0)/dayScores.length;
   }
+
   const motE=journal.filter(j=>j.date>=fromDate&&j.date<=toDate&&j.motivation);
-  // No entries = neutral 5/10, not 0 — doesn't punish for not journalling
   const motScore=motE.length?(motE.reduce((s,j)=>s+j.motivation,0)/motE.length)*10:50;
-  const goalScore=goals.length?goals.reduce((s,g)=>s+g.progress,0)/goals.length:0;
-  const overall=Math.round(habitScore*0.5+motScore*0.2+goalScore*0.3);
+  const goalScore=goals.length?goals.reduce((s,g)=>s+g.progress,0)/goals.length:50;
+  const overall=Math.round(habitScore*0.6+motScore*0.2+goalScore*0.2);
   return{overall,habitScore:Math.round(habitScore),motScore:Math.round(motScore),goalScore:Math.round(goalScore),motHasData:motE.length>0};
 }
 
@@ -1548,7 +1952,7 @@ function calcMomentum(fromDate,toDate){
 // Day of week completion rates
 function calcDayOfWeek(fromDate,toDate){
   const cbH=habits.filter(habitIsCheckbox);
-  if(!cbH.length)return null;
+  if(!cbH.length)return habits.length?[]:null;
   const days=getDaysInRange(fromDate,toDate);
   const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const counts=Array(7).fill(0);
@@ -1669,7 +2073,7 @@ function renderStats(){
 
   // Habit correlations
   const corrs=calcCorrelations(start,end);
-  document.getElementById('habitCorrelation').innerHTML=!corrs.length
+  const _hcEl=document.getElementById('habitCorrelation');if(_hcEl)_hcEl.innerHTML=!corrs.length
     ?`<div class="empty-state" style="padding:16px"><div class="empty-icon" style="font-size:14px">◈</div>Need 2+ habits</div>`
     :corrs.map(({a,b,pct,aDone})=>{
       const color=pct>=80?'var(--accent2)':pct>=50?'var(--warn)':'var(--text2)';
@@ -1684,10 +2088,14 @@ function renderStats(){
 
   renderPersonalRecords();
   renderGoalPredictions();
+  renderSparklineSelector();
+  renderSparklineChart();
+  renderCorrPanel();
+  renderGoalTimeSelector();
+  renderGoalTimeChart();
   renderScoreChart();
   renderConsistencyChart(start,end);
   renderDayOfWeekChart(start,end);
-  renderMotPerfChart(start,end);
   renderHabitChart();
   renderMotChart();
   renderGoalChart();
@@ -1731,7 +2139,8 @@ function renderScoreChart(){
   destroyChart('chartScore');
   const buckets=buildBuckets(activePeriod,chartOffsets.score);
   const data=buckets.map(b=>b.days.length?calcScore(b.days[0],b.days[b.days.length-1]).overall:0);
-  document.getElementById('scoreNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.score);
+  // Show at least 0 values so chart frame renders even with 1 day of data
+  const _snl=document.getElementById('scoreNavLabel');if(_snl)_snl.textContent=periodWindowLabel(activePeriod,chartOffsets.score);
   const ctx=document.getElementById('chartScore').getContext('2d');
   const grad=ctx.createLinearGradient(0,0,0,260);
   grad.addColorStop(0,'rgba(0,255,157,0.18)');grad.addColorStop(0.6,'rgba(255,184,0,0.05)');grad.addColorStop(1,'rgba(0,255,157,0)');
@@ -1807,7 +2216,11 @@ function renderConsistencyChart(fromDate,toDate){
 function renderDayOfWeekChart(fromDate,toDate){
   destroyChart('chartDayOfWeek');
   const data=calcDayOfWeek(fromDate,toDate);
-  if(!data)return;
+  if(!data){
+    const ctx=document.getElementById('chartDayOfWeek')?.getContext('2d');
+    if(ctx){setTimeout(()=>{ctx.fillStyle='rgba(0,210,255,0.15)';ctx.font="10px 'Share Tech Mono'";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('// Add checkbox habits to see day breakdown',ctx.canvas.width/2,ctx.canvas.height/2);},30);}
+    return;
+  }
   const ctx=document.getElementById('chartDayOfWeek').getContext('2d');
   const rates=data.map(d=>d.rate??0);
   const best=Math.max(...rates);
@@ -1830,6 +2243,7 @@ function renderMotPerfChart(fromDate,toDate){
   destroyChart('chartMotPerf');
   const points=calcMotPerf(fromDate,toDate);
   const canvas=document.getElementById('chartMotPerf');
+  if(!canvas)return;
   const ctx=canvas.getContext('2d');
   if(points.length<3){
     // Draw placeholder text after a brief delay so canvas has dimensions
@@ -1899,10 +2313,17 @@ zoom:makeZoom('xy')
 
 function renderHabitChart(){
   destroyChart('chartHabit');
-  const cbH=habits.filter(habitIsCheckbox);
   const buckets=buildBuckets(activePeriod,chartOffsets.habit);
-  const data=buckets.map(b=>!cbH.length||!b.days.length?0:Math.round(b.days.reduce((s,d)=>s+cbH.filter(h=>isHabitDone(h.id,d)).length/cbH.length,0)/b.days.length*100));
-  document.getElementById('habitNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.habit);
+  // Use all habits for scoring now, not just checkbox
+  const data=buckets.map(b=>{
+    if(!habits.length||!b.days.length)return 0;
+    const dayScores=b.days.map(d=>{
+      const scores=habits.map(h=>scoreHabitDay(h,d));
+      return scores.reduce((a,b)=>a+b,0)/scores.length;
+    });
+    return Math.round(dayScores.reduce((a,b)=>a+b,0)/dayScores.length);
+  });
+  const _hnl=document.getElementById('habitNavLabel');if(_hnl)_hnl.textContent=periodWindowLabel(activePeriod,chartOffsets.habit);
   const ctx=document.getElementById('chartHabit').getContext('2d');
   charts['chartHabit']=new Chart(ctx,{type:'bar',
     data:{labels:buckets.map(b=>b.label),datasets:[{data,
@@ -1921,7 +2342,7 @@ function renderMotChart(){
     const e=journal.filter(j=>b.days.includes(j.date)&&j.motivation);
     return e.length?Math.round(e.reduce((s,j)=>s+j.motivation,0)/e.length*10)/10:0;
   });
-  document.getElementById('motNavLabel').textContent=periodWindowLabel(activePeriod,chartOffsets.mot);
+  const _mnl=document.getElementById('motNavLabel');if(_mnl)_mnl.textContent=periodWindowLabel(activePeriod,chartOffsets.mot);
   const ctx=document.getElementById('chartMot').getContext('2d');
   const grad=ctx.createLinearGradient(0,0,0,220);
   grad.addColorStop(0,'rgba(255,184,0,0.16)');grad.addColorStop(1,'rgba(255,184,0,0)');
@@ -2140,6 +2561,420 @@ function showHeatTip(e,el){
 }
 function hideTooltip(){if(tooltipEl)tooltipEl.style.display='none';}
 
+// ── HABIT SPARKLINE ───────────────────────────────────────────
+function renderSparklineSelector(){
+  const el=document.getElementById('sparklineHabitBtns');
+  if(!el)return;
+  if(!habits.length){el.innerHTML='<span style="color:var(--text3);font-size:10px;">No habits yet</span>';return;}
+  if(!sparklineHabitId&&habits.length)sparklineHabitId=habits[0].id;
+  el.innerHTML=habits.map(h=>{
+    const color=h.color||getCatColor(h.category||'General');
+    const active=sparklineHabitId===h.id;
+    return`<button class="sparkline-habit-btn${active?' active':''}"
+      style="${active?`background:${color};border-color:${color};color:#000;`:`border-color:${color}40;`}"
+      onclick="selectSparklineHabit(${h.id})">${h.name}</button>`;
+  }).join('');
+  renderSparklineMetrics();
+}
+
+function selectSparklineHabit(id){
+  sparklineHabitId=id;
+  sparklineMetrics=new Set();
+  renderSparklineSelector();
+  renderSparklineChart();
+}
+
+function renderSparklineMetrics(){
+  const el=document.getElementById('sparklineMetricBtns');
+  if(!el||!sparklineHabitId)return;
+  const h=habits.find(h=>h.id===sparklineHabitId);
+  if(!h)return;
+  const types=h.type?h.type.split(','):['checkbox'];
+  const metricDefs=[];
+  if(types.includes('checkbox'))metricDefs.push({key:'done',label:'Done %',color:'#00ff9d'});
+  if(types.some(t=>['quantity','duration','distance'].includes(t)))metricDefs.push({key:'value',label:h.unit||'Value',color:h.color||'#00d2ff'});
+  if(types.includes('rating'))metricDefs.push({key:'rating',label:'Rating',color:'#ffb800'});
+  if(types.includes('time'))metricDefs.push({key:'time',label:'Wake Time',color:'#ff7eb3'});
+  if(!sparklineMetrics.size&&metricDefs.length)sparklineMetrics.add(metricDefs[0].key);
+  el.innerHTML=metricDefs.map(m=>`<button class="metric-toggle${sparklineMetrics.has(m.key)?' active':''}"
+    style="${sparklineMetrics.has(m.key)?`border-color:${m.color};color:${m.color};background:${m.color}18;`:''}"
+    onclick="toggleSparklineMetric('${m.key}')">${m.label}</button>`).join('');
+}
+
+function toggleSparklineMetric(key){
+  if(sparklineMetrics.has(key))sparklineMetrics.delete(key);
+  else sparklineMetrics.add(key);
+  if(!sparklineMetrics.size)sparklineMetrics.add(key); // keep at least one
+  renderSparklineMetrics();
+  renderSparklineChart();
+}
+
+function renderSparklineChart(){
+  destroyChart('chartSparkline');
+  const canvas=document.getElementById('chartSparkline');
+  if(!canvas||!sparklineHabitId)return;
+  const h=habits.find(h=>h.id===sparklineHabitId);
+  if(!h)return;
+  const{start,end}=getPeriodRange(activePeriod);
+  const days=getDaysInRange(start,end);
+  const labels=days.map(d=>fmtShort(d));
+  const color=h.color||getCatColor(h.category||'General');
+  const datasets=[];
+  const scales={x:{ticks:{color:TC,font:CF,maxRotation:45},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}};
+
+  if(sparklineMetrics.has('done')){
+    const data=days.map(d=>isHabitDone(h.id,d)?100:0);
+    const grad=canvas.getContext('2d').createLinearGradient(0,0,0,260);
+    grad.addColorStop(0,'rgba(0,255,157,0.15)');grad.addColorStop(1,'rgba(0,255,157,0)');
+    datasets.push({label:'Done %',data,borderColor:'#00ff9d',backgroundColor:grad,
+      pointRadius:2,tension:0.3,fill:true,spanGaps:true,yAxisID:'yDone'});
+    scales['yDone']={position:'left',min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},
+      grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}};
+  }
+  if(sparklineMetrics.has('value')){
+    const data=days.map(d=>{const v=getHabitValue(h.id,d);return v?Math.round(parseFloat(v)*10)/10:0;});
+    datasets.push({label:h.unit||'Value',data,borderColor:color,backgroundColor:'transparent',
+      pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yVal'});
+    const nonZero=data.filter(v=>v>0);
+    const mx=nonZero.length?Math.max(...nonZero)*1.15:10;
+    scales['yVal']={position:datasets.length>1?'right':'left',min:0,max:mx,
+      ticks:{color:TC,font:CF,callback:v=>Math.round(v*10)/10+(h.unit?' '+h.unit:'')},
+      grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}};
+  }
+  if(sparklineMetrics.has('time')){
+    const data=days.map(d=>{const v=getHabitValue(h.id,d);if(!v)return null;const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});
+    datasets.push({label:'Wake Time',data,borderColor:'#ff7eb3',backgroundColor:'transparent',
+      pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yTime'});
+    const nonNull=data.filter(v=>v!==null);
+    const mn=nonNull.length?Math.min(...nonNull)-30:300,mx=nonNull.length?Math.max(...nonNull)+30:720;
+    scales['yTime']={position:'right',min:Math.max(0,mn),max:mx,
+      ticks:{color:TC,font:CF,callback:v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}},
+      grid:{color:'transparent'},border:{color:'rgba(0,210,255,0.08)'}};
+  }
+  if(!datasets.length)return;
+  charts['chartSparkline']=new Chart(canvas.getContext('2d'),{type:'line',
+    data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:datasets.length>1,labels:{color:TC,font:CF,boxWidth:10,padding:10}},
+        tooltip:tooltipDefaults(),zoom:makeZoom('x')},
+      scales}});
+}
+
+// ── CUSTOM CORRELATION ────────────────────────────────────────
+function saveCorrPairs(){localStorage.setItem('cave_corr_pairs',JSON.stringify(corrPairs));}
+
+function openAddCorr(){
+  const a=document.getElementById('corrHabitA');
+  const b=document.getElementById('corrHabitB');
+  if(!a||!b)return;
+  const opts=habits.map(h=>`<option value="${h.id}">${h.name}</option>`).join('');
+  a.innerHTML=opts;b.innerHTML=opts;
+  if(habits.length>1)b.selectedIndex=1;
+  openModal('addCorrModal');
+}
+
+function saveAddCorr(){
+  const aId=parseInt(document.getElementById('corrHabitA').value);
+  const bId=parseInt(document.getElementById('corrHabitB').value);
+  if(aId===bId)return alert('Pick two different habits');
+  if(corrPairs.some(p=>(p[0]===aId&&p[1]===bId)||(p[0]===bId&&p[1]===aId)))return alert('Pair already exists');
+  corrPairs.push([aId,bId]);
+  saveCorrPairs();
+  closeModal('addCorrModal');
+  renderCorrPanel();
+}
+
+function calcCorrPearson(idA,idB,fromDate,toDate){
+  const days=getDaysInRange(fromDate,toDate);
+  const pairs=days.map(d=>{
+    const a=getHabitValue(idA,d)||( isHabitDone(idA,d)?'1':'0');
+    const b=getHabitValue(idB,d)||( isHabitDone(idB,d)?'1':'0');
+    return[parseFloat(a),parseFloat(b)];
+  }).filter(([a,b])=>!isNaN(a)&&!isNaN(b));
+  if(pairs.length<3)return null;
+  const n=pairs.length;
+  const mx=pairs.reduce((s,[a])=>s+a,0)/n;
+  const my=pairs.reduce((s,[,b])=>s+b,0)/n;
+  const num=pairs.reduce((s,[a,b])=>s+(a-mx)*(b-my),0);
+  const den=Math.sqrt(pairs.reduce((s,[a])=>s+(a-mx)**2,0)*pairs.reduce((s,[,b])=>s+(b-my)**2,0));
+  return den?parseFloat((num/den).toFixed(2)):0;
+}
+
+function renderCorrPanel(){
+  const el=document.getElementById('corrPanel');
+  if(!el)return;
+  if(corrDetailIdx!==null){renderCorrDetail();return;}
+  if(!corrPairs.length){
+    el.innerHTML=`<div style="color:var(--text3);font-size:10px;letter-spacing:1px;padding:12px 0;">No pairs added yet. Click + Add Pair above.</div>`;
+    return;
+  }
+  const{start,end}=getPeriodRange(activePeriod);
+  el.innerHTML=`<div class="corr-panel-view">${corrPairs.map((pair,i)=>{
+    const hA=habits.find(h=>h.id===pair[0]);
+    const hB=habits.find(h=>h.id===pair[1]);
+    if(!hA||!hB)return'';
+    const r=calcCorrPearson(pair[0],pair[1],start,end);
+    const pct=r!==null?Math.round(Math.abs(r)*100):null;
+    const rColor=pct===null?'var(--text3)':pct>=60?'var(--accent2)':pct>=30?'var(--warn)':'var(--text2)';
+    const aColor=hA.color||getCatColor(hA.category||'General');
+    const bColor=hB.color||getCatColor(hB.category||'General');
+    return`<div class="corr-pair-row" onclick="openCorrDetail(${i})">
+      <div class="corr-pair-names"><span style="color:${aColor}">${hA.name}</span> <span>↔</span> <span style="color:${bColor}">${hB.name}</span></div>
+      ${pct!==null?`<div class="corr-pair-bar-wrap"><div class="corr-pair-bar-fill" style="width:${pct}%;background:${rColor}"></div></div>
+        <div class="corr-pair-pct" style="color:${rColor}">${r>0?'+':''}${r}</div>`:'<div style="font-size:9px;color:var(--text3)">need more data</div>'}
+      <button style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;margin-left:6px;" onclick="event.stopPropagation();removeCorrPair(${i})">×</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function removeCorrPair(i){corrPairs.splice(i,1);saveCorrPairs();renderCorrPanel();}
+
+function openCorrDetail(i){corrDetailIdx=i;corrDetailView=0;renderCorrDetail();}
+
+function renderCorrDetail(){
+  const el=document.getElementById('corrPanel');
+  if(!el||corrDetailIdx===null)return;
+  const pair=corrPairs[corrDetailIdx];
+  const hA=habits.find(h=>h.id===pair[0]);
+  const hB=habits.find(h=>h.id===pair[1]);
+  if(!hA||!hB){corrDetailIdx=null;renderCorrPanel();return;}
+  const{start,end}=getPeriodRange(activePeriod);
+  const r=calcCorrPearson(pair[0],pair[1],start,end);
+  const rLabel=r===null?'No data':Math.abs(r)>=0.6?'Strong':Math.abs(r)>=0.3?'Moderate':'Weak';
+  const rColor=r===null?'var(--text3)':Math.abs(r)>=0.6?'var(--accent2)':Math.abs(r)>=0.3?'var(--warn)':'var(--red)';
+  const viewLabels=['Lines','Scatter + r'];
+  const aColor=hA.color||getCatColor(hA.category||'General');
+  const bColor=hB.color||getCatColor(hB.category||'General');
+
+  el.innerHTML=`<div class="corr-detail-header">
+    <button class="corr-back-btn" onclick="corrDetailIdx=null;renderCorrPanel()">← Back</button>
+    <span style="font-size:10px;color:var(--text);letter-spacing:1px;">
+      <span style="color:${aColor}">${hA.name}</span> ↔ <span style="color:${bColor}">${hB.name}</span>
+    </span>
+    <div class="corr-view-nav">
+      <button class="corr-view-btn" onclick="corrDetailView=(corrDetailView+1)%2;renderCorrDetail()">›</button>
+      <div class="corr-view-label">${viewLabels[corrDetailView]}</div>
+    </div>
+  </div>
+  <div style="font-size:10px;margin-bottom:8px;">
+    r = <span style="font-family:'Orbitron',monospace;color:${rColor}">${r??'—'}</span>
+    <span style="color:${rColor};margin-left:8px;font-size:9px;letter-spacing:1px;">${rLabel} correlation</span>
+  </div>
+  <div class="chart-wrap-md"><canvas id="chartCorrDetail"></canvas></div>`;
+
+  const days=getDaysInRange(start,end);
+  const ctx=document.getElementById('chartCorrDetail')?.getContext('2d');
+  if(!ctx)return;
+
+  if(corrDetailView===0){
+    // Overlaid lines
+    const dataA=days.map(d=>{const v=getHabitValue(hA.id,d)||( isHabitDone(hA.id,d)?'1':'0');return parseFloat(v)||0;});
+    const dataB=days.map(d=>{const v=getHabitValue(hB.id,d)||( isHabitDone(hB.id,d)?'1':'0');return parseFloat(v)||0;});
+    charts['chartCorrDetail']=new Chart(ctx,{type:'line',
+      data:{labels:days.map(d=>fmtShort(d)),datasets:[
+        {label:hA.name,data:dataA,borderColor:aColor,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,yAxisID:'yA'},
+        {label:hB.name,data:dataB,borderColor:bColor,backgroundColor:'transparent',pointRadius:2,tension:0.3,spanGaps:true,yAxisID:'yB'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,labels:{color:TC,font:CF,boxWidth:8,padding:10}},tooltip:tooltipDefaults(),zoom:makeZoom('x')},
+        scales:{
+          x:{ticks:{color:TC,font:CF,maxRotation:45},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
+          yA:{position:'left',ticks:{color:aColor,font:CF,maxTicksLimit:5},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
+          yB:{position:'right',ticks:{color:bColor,font:CF,maxTicksLimit:5},grid:{color:'transparent'},border:{color:'rgba(0,210,255,0.08)'}}
+        }}});
+  }else{
+    // Scatter + r
+    const points=days.map(d=>{
+      const vA=parseFloat(getHabitValue(hA.id,d)||( isHabitDone(hA.id,d)?1:0));
+      const vB=parseFloat(getHabitValue(hB.id,d)||( isHabitDone(hB.id,d)?1:0));
+      return{x:vA,y:vB};
+    }).filter(p=>p.x>0||p.y>0);
+    charts['chartCorrDetail']=new Chart(ctx,{type:'scatter',
+      data:{datasets:[{label:'Days',data:points,backgroundColor:`rgba(${hexToRgb(aColor)},0.7)`,pointRadius:5,pointHoverRadius:7}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`${hA.name}: ${c.parsed.x} · ${hB.name}: ${c.parsed.y}`}},zoom:makeZoom('xy')},
+        scales:{
+          x:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:hA.name,color:TC,font:CF}},
+          y:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'},title:{display:true,text:hB.name,color:TC,font:CF}}
+        }}});
+  }
+}
+
+// ── GOAL PROGRESS OVER TIME ───────────────────────────────────
+function renderGoalTimeSelector(){
+  const el=document.getElementById('goalTimeBtns');
+  if(!el)return;
+  if(!goals.length){el.innerHTML='<span style="color:var(--text3);font-size:10px;">No goals yet.</span>';return;}
+  if(!selectedGoalTimeId)selectedGoalTimeId=goals[0].id;
+  el.innerHTML=goals.map(g=>{
+    const active=selectedGoalTimeId===g.id;
+    return`<button class="goal-sel-btn${active?' active':''}" onclick="selectGoalTime(${g.id})">${g.name.length>20?g.name.slice(0,20)+'…':g.name}</button>`;
+  }).join('');
+}
+
+function selectGoalTime(id){selectedGoalTimeId=id;renderGoalTimeSelector();renderGoalTimeChart();}
+
+function renderGoalTimeChart(){
+  destroyChart('chartGoalTime');
+  const canvas=document.getElementById('chartGoalTime');
+  if(!canvas||!selectedGoalTimeId)return;
+  const g=goals.find(g=>g.id===selectedGoalTimeId);
+  if(!g)return;
+  const ctx=canvas.getContext('2d');
+  const logs=goalLog.filter(l=>l.goal_id===g.id).sort((a,b)=>a.logged_at.localeCompare(b.logged_at));
+  if(logs.length<2){
+    setTimeout(()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(255,184,0,0.3)';ctx.font="10px 'Share Tech Mono'";
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(`// ${g.name}: ${g.progress}% — log more updates to see trend`,canvas.width/2,canvas.height/2);
+    },30);
+    return;
+  }
+  const labels=logs.map(l=>new Date(l.logged_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const data=logs.map(l=>l.progress);
+  const grad=ctx.createLinearGradient(0,0,0,260);
+  grad.addColorStop(0,'rgba(255,184,0,0.18)');grad.addColorStop(1,'rgba(255,184,0,0)');
+  charts['chartGoalTime']=new Chart(ctx,{type:'line',
+    data:{labels,datasets:[{data,borderColor:'#ffb800',backgroundColor:grad,
+      pointBackgroundColor:'#ffb800',pointRadius:4,tension:0.3,fill:true,spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{...tooltipDefaults(),callbacks:{label:c=>`Progress: ${c.raw}%`}},zoom:makeZoom('x')},
+      scales:{x:{ticks:{color:TC,font:CF},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}},
+        y:{min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}}}});
+}
+
+// Log goal progress snapshot when it changes
+async function logGoalProgress(goalId,progress){
+  const{data}=await sb.from('goal_log').insert({goal_id:goalId,progress}).select().single();
+  if(data)goalLog.push(data);
+}
+
+// ── EDIT FUNCTIONS ────────────────────────────────────────────
+let editHabitColor='#00d2ff';
+
+function openEditHabit(id){
+  const h=habits.find(h=>h.id===id);if(!h)return;
+  document.getElementById('editHabitId').value=id;
+  document.getElementById('editHabitName').value=h.name;
+  editHabitColor=h.color||'#00d2ff';
+  // Category picker
+  const cp=document.getElementById('editCatPicker');
+  cp.innerHTML=PRESETS.map(p=>`<div class="cat-opt${(h.category||'General')===p.name?' selected':''}"
+    style="${(h.category||'General')===p.name?`background:${p.color};border-color:${p.color};color:#000;`:''}"
+    onclick="selectEditCat('${p.name}','${p.color}',this)">${p.name}</div>`).join('')
+    +`<div class="cat-opt" onclick="selectEditCat('custom','',this)">+ Custom</div>`;
+  // Color picker
+  document.getElementById('editColorPicker').innerHTML=PALETTE.map(col=>
+    `<div class="color-swatch${col===editHabitColor?' selected':''}" style="background:${col};"
+      onclick="editHabitColor='${col}';document.querySelectorAll('#editColorPicker .color-swatch').forEach(s=>s.classList.remove('selected'));this.classList.add('selected')"></div>`
+  ).join('');
+  openModal('editHabitModal');
+}
+
+let editHabitCat='General';
+function selectEditCat(name,color,el){
+  editHabitCat=name==='custom'?'':name;
+  if(color)editHabitColor=color;
+  document.querySelectorAll('#editCatPicker .cat-opt').forEach(o=>{o.classList.remove('selected');o.style.background='';o.style.borderColor='';o.style.color='';});
+  el.classList.add('selected');
+  if(color){el.style.background=color;el.style.borderColor=color;el.style.color='#000';}
+  document.getElementById('editCustomCat').style.display=name==='custom'?'block':'none';
+}
+
+async function saveEditHabit(){
+  const id=parseInt(document.getElementById('editHabitId').value);
+  const name=document.getElementById('editHabitName').value.trim();if(!name)return;
+  const category=editHabitCat||document.getElementById('editCustomCat').value.trim()||'General';
+  setSyncStatus('syncing');
+  await sb.from('habits').update({name,category,color:editHabitColor}).eq('id',id);
+  const h=habits.find(h=>h.id===id);
+  if(h){h.name=name;h.category=category;h.color=editHabitColor;}
+  setSyncStatus('ok');closeModal('editHabitModal');render();
+}
+
+function openEditGoal(id){
+  const g=goals.find(g=>g.id===id);if(!g)return;
+  document.getElementById('editGoalId').value=id;
+  document.getElementById('editGoalName').value=g.name;
+  document.getElementById('editGoalDeadline').value=g.deadline||'';
+  renderMilestonesList(id);
+  openModal('editGoalModal');
+}
+
+function renderMilestonesList(goalId){
+  const el=document.getElementById('editMilestones');
+  if(!el)return;
+  const gm=milestones.filter(m=>m.goal_id===goalId);
+  if(!gm.length){el.innerHTML='<div style="color:var(--text3);font-size:10px;padding:4px 0;">No milestones yet.</div>';return;}
+  el.innerHTML=gm.map(m=>`<div class="milestone-row">
+    <div class="milestone-check${m.done?' done':''}" onclick="toggleMilestone(${m.id})">${m.done?'✓':''}</div>
+    <div class="milestone-name${m.done?' done':''}">${m.name}</div>
+    <button class="milestone-del" onclick="deleteMilestone(${m.id})">×</button>
+  </div>`).join('');
+}
+
+async function addMilestone(){
+  const input=document.getElementById('newMilestoneInput');
+  const name=input.value.trim();if(!name)return;
+  const goalId=parseInt(document.getElementById('editGoalId').value);
+  setSyncStatus('syncing');
+  const{data}=await sb.from('milestones').insert({goal_id:goalId,name,done:false}).select().single();
+  if(data)milestones.push(data);
+  setSyncStatus('ok');input.value='';
+  renderMilestonesList(goalId);
+}
+
+async function toggleMilestone(id){
+  const m=milestones.find(m=>m.id===id);if(!m)return;
+  m.done=!m.done;setSyncStatus('syncing');
+  await sb.from('milestones').update({done:m.done}).eq('id',id);
+  setSyncStatus('ok');
+  renderMilestonesList(m.goal_id);
+  render();
+}
+
+async function deleteMilestone(id){
+  const m=milestones.find(m=>m.id===id);if(!m)return;
+  if(!confirm('Delete this milestone?'))return;
+  setSyncStatus('syncing');
+  await sb.from('milestones').delete().eq('id',id);
+  milestones=milestones.filter(m=>m.id!==id);
+  setSyncStatus('ok');renderMilestonesList(m.goal_id);
+}
+
+async function saveEditGoal(){
+  const id=parseInt(document.getElementById('editGoalId').value);
+  const name=document.getElementById('editGoalName').value.trim();if(!name)return;
+  const deadline=document.getElementById('editGoalDeadline').value||null;
+  setSyncStatus('syncing');
+  await sb.from('goals').update({name,deadline}).eq('id',id);
+  const g=goals.find(g=>g.id===id);
+  if(g){g.name=name;g.deadline=deadline;}
+  setSyncStatus('ok');closeModal('editGoalModal');render();
+}
+
+function openEditJournal(id){
+  const j=journal.find(j=>j.id===id);if(!j)return;
+  document.getElementById('editJournalId').value=id;
+  document.getElementById('editJournalText').value=j.text;
+  document.getElementById('editMotSlider').value=j.motivation||5;
+  const disp=document.getElementById('editMotDisplay');
+  if(disp){disp.textContent=j.motivation||5;}
+  openModal('editJournalModal');
+}
+
+async function saveEditJournal(){
+  const id=parseInt(document.getElementById('editJournalId').value);
+  const text=document.getElementById('editJournalText').value.trim();if(!text)return;
+  const motivation=parseInt(document.getElementById('editMotSlider').value);
+  setSyncStatus('syncing');
+  await sb.from('journal').update({text,motivation}).eq('id',id);
+  const j=journal.find(j=>j.id===id);
+  if(j){j.text=text;j.motivation=motivation;}
+  setSyncStatus('ok');closeModal('editJournalModal');render();
+}
+
 // ── RENDER ────────────────────────────────────────────────────
 function render(){renderDashboard();renderHabits();renderGoals();renderJournal();}
 
@@ -2148,7 +2983,9 @@ function render(){renderDashboard();renderHabits();renderGoals();renderJournal()
 
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal('habitModal');closeModal('goalModal');}
+  if(e.key==='Escape'){
+    ['habitModal','goalModal','editHabitModal','editGoalModal','editJournalModal','addCorrModal'].forEach(id=>closeModal(id));
+  }
   if(e.key==='Enter'&&document.getElementById('goalModal').classList.contains('open'))saveGoal();
   if(e.key==='Enter'&&document.getElementById('gate').style.display!=='none')checkPassword();
 });
