@@ -1419,6 +1419,7 @@ function renderHabits(){
           return`<div class="week-label${d===td?' today-label':''}">${label}</div>`;
         }).join('');
         // Build compact summary for collapsed state
+        const hasBoth=habitIsCheckbox(h)&&(habitIsNumeric(h)||habitIsTime(h)||habitIsRating(h));
         const valDisplay=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):habitIsTime(h)&&val?val:habitIsRating(h)&&val?`${val}/10`:'';
         const typeLabel=hasBoth?h.type.replace('checkbox,','').replace(',','+'):h.type!=='checkbox'?h.type.replace(',','+'):'';
         const noteHtml=renderThread('habit',h.id,color);
