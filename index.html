@@ -874,20 +874,11 @@ select.input{cursor:pointer;}
         </div>
       </div>
       <div style="font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:6px;line-height:1.6;">
-        Tip: combine Checkbox + Quantity to both mark done and log a number (e.g. gym ✓ + sets logged)
+        Select any combination. Each metric gets its own log input.
       </div>
     </div>
-    <div class="extra-fields" id="quantityFields" style="display:none;">
-      <div class="modal-label">Quantity / Distance / Duration Settings</div>
-      <div class="row-2">
-        <div><div style="font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:4px;">UNIT</div><input class="input" id="habitUnit" placeholder="hrs, pages, km, min..." style="margin-bottom:0;"></div>
-        <div><div style="font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:4px;">DAILY TARGET</div><input class="input" id="habitTarget" type="number" placeholder="e.g. 8" style="margin-bottom:0;"></div>
-      </div>
-    </div>
-    <div class="extra-fields" id="timeFields" style="display:none;">
-      <div class="modal-label">Time Label</div>
-      <input class="input" id="habitTimeLabel" placeholder="e.g. Wake up, Bedtime..." style="margin-bottom:0;">
-    </div>
+    <!-- Per-type config — generated dynamically by toggleType -->
+    <div id="typeConfigFields"></div>
     <div class="modal-section">
       <div class="modal-label">Color</div>
       <div class="color-row" id="colorPicker"></div>
@@ -927,6 +918,18 @@ select.input{cursor:pointer;}
       <div class="cat-grid" id="editCatPicker"></div>
       <input class="input" id="editCustomCat" placeholder="// custom category" style="display:none;margin-top:6px;margin-bottom:0;">
     </div>
+    <div class="modal-section">
+      <div class="modal-label">Type <span style="color:var(--text3);font-size:8px;letter-spacing:1px;">(select any combo)</span></div>
+      <div class="type-grid" id="editTypeGrid">
+        <div class="type-opt" data-type="checkbox" onclick="toggleEditType('checkbox',this)"><div class="type-icon">✓</div><div class="type-label">Checkbox</div></div>
+        <div class="type-opt" data-type="quantity" onclick="toggleEditType('quantity',this)"><div class="type-icon">⟨n⟩</div><div class="type-label">Quantity</div></div>
+        <div class="type-opt" data-type="time" onclick="toggleEditType('time',this)"><div class="type-icon">◷</div><div class="type-label">Time</div></div>
+        <div class="type-opt" data-type="duration" onclick="toggleEditType('duration',this)"><div class="type-icon">⏱</div><div class="type-label">Duration</div></div>
+        <div class="type-opt" data-type="rating" onclick="toggleEditType('rating',this)"><div class="type-icon">★</div><div class="type-label">Rating</div></div>
+        <div class="type-opt" data-type="distance" onclick="toggleEditType('distance',this)"><div class="type-icon">↗</div><div class="type-label">Distance</div></div>
+      </div>
+    </div>
+    <div id="editTypeConfigFields"></div>
     <div class="modal-section">
       <div class="modal-label">Color</div>
       <div class="color-row" id="editColorPicker"></div>
@@ -1105,6 +1108,45 @@ function habitPrimaryType(h){
 }
 
 
+
+// ── HABIT META HELPERS ────────────────────────────────────────
+// unit field stores JSON for multi-type: {"duration":{label,target},"rating":{label}}
+// Falls back to old plain string for backward compat
+function getHabitMeta(h){
+  try{return JSON.parse(h.unit||'{}');}
+  catch{return h.unit?{_legacy:h.unit}:{};}
+}
+function getTypeLabel(h,type){
+  const meta=getHabitMeta(h);
+  if(meta._legacy)return meta._legacy; // old single-type habit
+  return meta[type]?.label||type;
+}
+function getTypeTarget(h,type){
+  const meta=getHabitMeta(h);
+  return meta[type]?.target||h.target||null;
+}
+function getMetricKey(h,type){
+  // For multi-metric habits, each type logs to a separate key in value
+  // value is stored as JSON: {"duration":"45","rating":"8"}
+  // For single type, value is still plain string for compat
+  return type;
+}
+function getHabitValueForType(h,date,type){
+  const raw=getHabitValue(h.id,date);
+  if(!raw)return null;
+  try{
+    const parsed=JSON.parse(raw);
+    return parsed[type]!==undefined?String(parsed[type]):null;
+  }catch{
+    // old format - return raw for the primary type
+    return raw;
+  }
+}
+function isMultiMetric(h){
+  const types=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
+  return types.length>1;
+}
+
 // ── NOTES STATE ──────────────────────────────────────────────
 let notes=[]; // all notes loaded from DB
 let expandedThreads=new Set(); // which habit/goal threads are open
@@ -1175,15 +1217,13 @@ let selectedTypes=new Set(['checkbox']); // multi-select set
 function initHabitModal(){
   selectedTypes=new Set(['checkbox']);
   selectedCategory='General';selectedColor='#00d2ff';
-  document.querySelectorAll('.type-opt').forEach(o=>{
+  document.querySelectorAll('#typeGrid .type-opt').forEach(o=>{
     o.classList.toggle('selected',o.dataset.type==='checkbox');
   });
-  document.getElementById('quantityFields').style.display='none';
-  document.getElementById('timeFields').style.display='none';
-  document.getElementById('habitUnit').value='';
-  document.getElementById('habitTarget').value='';
-  document.getElementById('habitTimeLabel').value='';
+  document.getElementById('typeConfigFields').innerHTML='';
   document.getElementById('habitNameInput').value='';
+  document.getElementById('customCatInput').value='';
+  document.getElementById('customCatInput').style.display='none';
   const cp=document.getElementById('catPicker');
   cp.innerHTML=PRESETS.map(p=>`<div class="cat-opt${p.name==='General'?' selected':''}" data-cat="${p.name}" style="${p.name==='General'?`background:${p.color};border-color:${p.color};color:#000;`:''}" onclick="selectCat('${p.name}','${p.color}',this)">${p.name}</div>`).join('')
     +`<div class="cat-opt custom-cat-opt" onclick="selectCat('custom','',this)">+ Custom</div>`;
@@ -1191,44 +1231,64 @@ function initHabitModal(){
 }
 
 function toggleType(type,el){
-  // Checkbox can always be combined with others
-  // quantity/distance/duration are mutually exclusive with each other
-  // time is standalone or with checkbox
-  const numericTypes=new Set(['quantity','distance','duration']);
-  if(type==='checkbox'){
-    if(selectedTypes.has('checkbox')&&selectedTypes.size>1){
-      selectedTypes.delete('checkbox');
-    }else{
-      selectedTypes.add('checkbox');
-    }
-  }else if(numericTypes.has(type)){
-    // Remove other numeric types
-    numericTypes.forEach(t=>{if(t!==type)selectedTypes.delete(t);});
-    if(selectedTypes.has(type))selectedTypes.delete(type);
-    else selectedTypes.add(type);
-  }else if(type==='time'||type==='rating'){
-    if(selectedTypes.has(type))selectedTypes.delete(type);
-    else selectedTypes.add(type);
+  if(selectedTypes.has(type)){
+    if(selectedTypes.size>1)selectedTypes.delete(type);
+    // keep at least one
+  }else{
+    selectedTypes.add(type);
   }
-  // Must have at least one type
-  if(selectedTypes.size===0)selectedTypes.add('checkbox');
-  // Sync UI
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.toggle('selected',selectedTypes.has(o.dataset.type)));
-  // Show/hide extra fields
-  const hasNumeric=[...selectedTypes].some(t=>numericTypes.has(t));
-  const hasTime=selectedTypes.has('time');
-  const hasRating=selectedTypes.has('rating');
-  document.getElementById('quantityFields').style.display=(hasNumeric||hasRating)?'block':'none';
-  document.getElementById('timeFields').style.display=hasTime?'block':'none';
-  // Update quantity label based on type
-  const qLabel=document.querySelector('#quantityFields .modal-label');
-  if(qLabel){
-    if(hasNumeric&&hasRating)qLabel.textContent='Quantity / Rating Settings';
-    else if(selectedTypes.has('duration'))qLabel.textContent='Duration Settings';
-    else if(selectedTypes.has('distance'))qLabel.textContent='Distance Settings';
-    else if(hasRating)qLabel.textContent='Rating Settings';
-    else qLabel.textContent='Quantity Settings';
-  }
+  document.querySelectorAll('#typeGrid .type-opt').forEach(o=>o.classList.toggle('selected',selectedTypes.has(o.dataset.type)));
+  renderTypeConfigFields('typeConfigFields');
+}
+
+const TYPE_DEFAULTS={
+  quantity:{label:'Value',unit:'',target:'',placeholder:'pages, reps, glasses...'},
+  duration:{label:'Duration',unit:'min',target:'',placeholder:'minutes'},
+  distance:{label:'Distance',unit:'km',target:'',placeholder:'km, miles, steps...'},
+  rating:{label:'Rating',unit:'',target:'10',placeholder:'1–10'},
+  time:{label:'Time',unit:'',target:'',placeholder:'e.g. Wake up time'},
+};
+
+function renderTypeConfigFields(containerId,existingMeta){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  const nonCb=[...selectedTypes].filter(t=>t!=='checkbox');
+  if(!nonCb.length){el.innerHTML='';return;}
+  el.innerHTML=nonCb.map(type=>{
+    const def=TYPE_DEFAULTS[type]||{label:type,unit:'',target:'',placeholder:''};
+    const meta=existingMeta?.[type]||{};
+    const unitVal=meta.label||def.unit;
+    const targetVal=meta.target||def.target;
+    const isRating=type==='rating';
+    return`<div class="modal-section" style="border:1px solid var(--border);padding:10px;margin-bottom:6px;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">// ${def.label}</div>
+      <div class="row-2">
+        ${isRating?`<div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">LABEL</div>
+          <input class="input" id="typeLabel_${type}" placeholder="e.g. quality, effort..." value="${unitVal||''}" style="margin-bottom:0;"></div>
+          <div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">MAX (default 10)</div>
+          <input class="input" id="typeTarget_${type}" type="number" placeholder="10" value="${targetVal||10}" style="margin-bottom:0;"></div>`
+        :`<div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">UNIT</div>
+          <input class="input" id="typeLabel_${type}" placeholder="${def.placeholder}" value="${unitVal||''}" style="margin-bottom:0;"></div>
+          <div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">DAILY TARGET</div>
+          <input class="input" id="typeTarget_${type}" type="number" placeholder="optional" value="${targetVal||''}" style="margin-bottom:0;"></div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildMetaFromForm(){
+  const nonCb=[...selectedTypes].filter(t=>t!=='checkbox');
+  if(!nonCb.length)return'';
+  const meta={};
+  nonCb.forEach(type=>{
+    const labelEl=document.getElementById(`typeLabel_${type}`);
+    const targetEl=document.getElementById(`typeTarget_${type}`);
+    meta[type]={
+      label:labelEl?.value.trim()||TYPE_DEFAULTS[type]?.unit||type,
+      target:targetEl?.value?parseFloat(targetEl.value):null
+    };
+  });
+  return JSON.stringify(meta);
 }
 function selectCat(name,color,el){
   if(name==='custom'){document.getElementById('customCatInput').style.display='block';selectedCategory='';document.querySelectorAll('.cat-opt').forEach(o=>{o.classList.remove('selected');o.style.background='';o.style.borderColor='';o.style.color='';});el.classList.add('selected');return;}
@@ -1248,17 +1308,17 @@ function renderColorPicker(){
 async function saveHabit(){
   let name=document.getElementById('habitNameInput').value.trim();if(!name)return;
   let category=selectedCategory||document.getElementById('customCatInput').value.trim()||'General';
-  // Store types as comma-separated string e.g. "checkbox,quantity"
   const typeStr=[...selectedTypes].join(',');
-  const primaryType=[...selectedTypes].find(t=>t!=='checkbox')||'checkbox';
-  const unit=['quantity','distance','duration'].some(t=>selectedTypes.has(t))?document.getElementById('habitUnit').value.trim():
-    selectedTypes.has('time')?document.getElementById('habitTimeLabel').value.trim()||'Time':'';
-  const target=['quantity','distance','duration'].some(t=>selectedTypes.has(t))&&document.getElementById('habitTarget').value
-    ?parseFloat(document.getElementById('habitTarget').value):null;
+  const unit=buildMetaFromForm(); // JSON string with per-type config
+  // For backward compat, also extract primary target
+  const nonCb=[...selectedTypes].filter(t=>t!=='checkbox');
+  let target=null;
+  if(nonCb.length){
+    const firstTargetEl=document.getElementById(`typeTarget_${nonCb[0]}`);
+    if(firstTargetEl?.value)target=parseFloat(firstTargetEl.value);
+  }
   const btn=document.getElementById('habitSaveBtn');btn.disabled=true;setSyncStatus('syncing');
-  const{data}=await sb.from('habits').insert({
-    name,type:typeStr,category,color:selectedColor,unit,target
-  }).select().single();
+  const{data}=await sb.from('habits').insert({name,type:typeStr,category,color:selectedColor,unit,target}).select().single();
   if(data)habits.push(data);
   setSyncStatus('ok');btn.disabled=false;closeModal('habitModal');render();
 }
@@ -1347,6 +1407,39 @@ function renderThread(type,refId,accentColor){
     </div>
   </div>`:''}`;
 }
+async function logHabitValueForType(id,type,value){
+  const td=today();setSyncStatus('syncing');
+  const strVal=String(value);
+  // Get existing value and merge
+  const existing=habitLog[td]?.[id];
+  let newVal=strVal;
+  if(existing){
+    try{
+      const parsed=JSON.parse(existing.value||'{}');
+      parsed[type]=strVal;
+      newVal=JSON.stringify(parsed);
+    }catch{
+      // Was plain string (single type) — convert to JSON
+      const h=habits.find(h=>h.id===id);
+      const primaryType=h?h.type.split(',').find(t=>t!=='checkbox')||'checkbox':'value';
+      newVal=JSON.stringify({[primaryType]:existing.value,[type]:strVal});
+    }
+    await sb.from('habit_log').update({value:newVal}).eq('id',existing.id);
+    habitLog[td][id].value=newVal;
+    // Auto-mark checkbox done when any metric is logged
+    if(!habitLog[td][id].done&&habitIsCheckbox(habits.find(h=>h.id===id))){
+      // already tracked via isHabitDone
+    }
+  }else{
+    const obj={[type]:strVal};
+    newVal=JSON.stringify(obj);
+    const{data}=await sb.from('habit_log').insert({habit_id:id,date:td,value:newVal,note:''}).select().single();
+    if(!habitLog[td])habitLog[td]={};
+    if(data)habitLog[td][id]={id:data.id,value:newVal,note:''};
+  }
+  setSyncStatus('ok');render();
+}
+
 async function logHabitValue(id,value){
   const td=today();setSyncStatus('syncing');
   const strVal=String(value);
@@ -1418,40 +1511,31 @@ function renderHabits(){
           const label=['S','M','T','W','T','F','S'][dow];
           return`<div class="week-label${d===td?' today-label':''}">${label}</div>`;
         }).join('');
-        // Build compact summary for collapsed state
-        const hasBoth=habitIsCheckbox(h)&&(habitIsNumeric(h)||habitIsTime(h)||habitIsRating(h));
-        const valDisplay=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`+(h.target?`/${h.target}`:''):habitIsTime(h)&&val?val:habitIsRating(h)&&val?`${val}/10`:'';
-        const typeLabel=hasBoth?h.type.replace('checkbox,','').replace(',','+'):h.type!=='checkbox'?h.type.replace(',','+'):'';
-        const noteHtml=renderThread('habit',h.id,color);
+        // All type info
+        const meta=getHabitMeta(h);
+        const nonCbTypes=[...new Set(h.type?h.type.split(','):[])].filter(t=>t!=='checkbox');
+        const hasBoth=habitIsCheckbox(h)&&nonCbTypes.length>0;
+        const typeLabel=nonCbTypes.join('+');
         const isExpanded=expandedHabits.has(h.id);
+        const noteHtml=renderThread('habit',h.id,color);
 
-        // Build expanded log panel content
+        // Compact value display for collapsed row
+        const valParts=nonCbTypes.map(type=>{
+          const v=getHabitValueForType(h,td,type);
+          if(!v||v==='0')return null;
+          const typeMeta=meta[type]||{};
+          const lbl=typeMeta.label||TYPE_DEFAULTS[type]?.unit||'';
+          if(type==='time')return v;
+          const target=typeMeta.target;
+          return v+(lbl?' '+lbl:'')+(target?'/'+target:'');
+        }).filter(Boolean);
+        const valDisplay=valParts.join(' · ');
+
+        // Build expanded log panel — one input per non-checkbox type
         let expandedContent='';
-        if(habitIsNumeric(h)||habitIsRating(h)){
-          const cur=val?parseFloat(val):0;
-          const maxV=habitIsRating(h)?10:null;
-          expandedContent+=`<div class="log-field">
-            <div class="log-field-label">${h.unit||'Value'}${h.target?' (target: '+h.target+')':''}</div>
-            <div class="log-field-controls">
-              <button class="log-btn" onclick="event.stopPropagation();logHabitValue(${h.id},Math.max(0,${cur}-1))">−</button>
-              <input class="log-input-sm" type="number" value="${cur||0}" min="0"${maxV?` max="${maxV}"`:''}
-                onclick="event.stopPropagation()"
-                onchange="event.stopPropagation();logHabitValue(${h.id},parseFloat(this.value)||0)">
-              <button class="log-btn" onclick="event.stopPropagation();logHabitValue(${h.id},${cur}+1)">+</button>
-            </div>
-          </div>`;
-        }
-        if(habitIsTime(h)){
-          expandedContent+=`<div class="log-field">
-            <div class="log-field-label">${h.unit||'Time'}</div>
-            <div class="log-field-controls">
-              <input class="log-input-sm" type="time" value="${val||''}" style="width:84px;"
-                onclick="event.stopPropagation()"
-                onchange="event.stopPropagation();logHabitValue(${h.id},this.value)">
-            </div>
-          </div>`;
-        }
-        if(habitIsCheckbox(h)&&hasBoth){
+
+        if(habitIsCheckbox(h)&&nonCbTypes.length){
+          // Checkbox first
           expandedContent+=`<div class="log-field">
             <div class="log-field-label">Done</div>
             <div class="log-field-controls">
@@ -1462,6 +1546,38 @@ function renderHabits(){
             </div>
           </div>`;
         }
+
+        nonCbTypes.forEach(type=>{
+          const typeMeta=meta[type]||{};
+          const tLabel=typeMeta.label||TYPE_DEFAULTS[type]?.unit||type;
+          const typeTarget=typeMeta.target||null;
+          // Get value for this specific type
+          let curVal=getHabitValueForType(h,td,type);
+          if(type==='time'){
+            expandedContent+=`<div class="log-field">
+              <div class="log-field-label">${tLabel||'Time'}</div>
+              <div class="log-field-controls">
+                <input class="log-input-sm" type="time" value="${curVal||''}" style="width:84px;"
+                  onclick="event.stopPropagation()"
+                  onchange="event.stopPropagation();logHabitValueForType(${h.id},'${type}',this.value)">
+              </div>
+            </div>`;
+          }else{
+            const cur=curVal?parseFloat(curVal):0;
+            const maxV=type==='rating'?(typeMeta.target||10):null;
+            expandedContent+=`<div class="log-field">
+              <div class="log-field-label">${tLabel}${typeTarget?' / '+typeTarget:''}</div>
+              <div class="log-field-controls">
+                <button class="log-btn" onclick="event.stopPropagation();logHabitValueForType(${h.id},'${type}',Math.max(0,${cur}-1))">−</button>
+                <input class="log-input-sm" type="number" value="${cur||0}" min="0"${maxV?` max="${maxV}"`:''}
+                  onclick="event.stopPropagation()"
+                  onchange="event.stopPropagation();logHabitValueForType(${h.id},'${type}',parseFloat(this.value)||0)">
+                <span style="font-size:9px;color:var(--text2)">${tLabel}</span>
+                <button class="log-btn" onclick="event.stopPropagation();logHabitValueForType(${h.id},'${type}',${cur}+1)">+</button>
+              </div>
+            </div>`;
+          }
+        });
 
         return`<div class="habit-item${done?' done':''}" style="border-left-color:${color}40;"
           onclick="toggleHabitExpand(${h.id})">
@@ -3189,19 +3305,64 @@ async function logGoalProgress(goalId,progress){
 
 // ── EDIT FUNCTIONS ────────────────────────────────────────────
 let editHabitColor='#00d2ff';
+let editHabitCat='General';
+let editSelectedTypes=new Set(['checkbox']);
+
+function toggleEditType(type,el){
+  if(editSelectedTypes.has(type)){
+    if(editSelectedTypes.size>1)editSelectedTypes.delete(type);
+  }else{
+    editSelectedTypes.add(type);
+  }
+  document.querySelectorAll('#editTypeGrid .type-opt').forEach(o=>o.classList.toggle('selected',editSelectedTypes.has(o.dataset.type)));
+  const h=habits.find(h=>h.id===parseInt(document.getElementById('editHabitId').value));
+  renderEditTypeConfig(h?getHabitMeta(h):{});
+}
+
+function renderEditTypeConfig(existingMeta){
+  const el=document.getElementById('editTypeConfigFields');
+  if(!el)return;
+  const nonCb=[...editSelectedTypes].filter(t=>t!=='checkbox');
+  if(!nonCb.length){el.innerHTML='';return;}
+  el.innerHTML=nonCb.map(type=>{
+    const def=TYPE_DEFAULTS[type]||{label:type,unit:'',target:'',placeholder:''};
+    const meta=existingMeta?.[type]||{};
+    const unitVal=meta.label||def.unit;
+    const targetVal=meta.target||def.target;
+    const isRating=type==='rating';
+    return`<div class="modal-section" style="border:1px solid var(--border);padding:10px;margin-bottom:6px;clip-path:polygon(4px 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 4px);">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--accent);margin-bottom:8px;text-transform:uppercase;">// ${def.label}</div>
+      <div class="row-2">
+        ${isRating
+          ?`<div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">LABEL</div>
+            <input class="input" id="typeLabel_${type}" placeholder="quality, effort..." value="${unitVal||''}" style="margin-bottom:0;"></div>
+            <div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">MAX</div>
+            <input class="input" id="typeTarget_${type}" type="number" value="${targetVal||10}" style="margin-bottom:0;"></div>`
+          :`<div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">UNIT</div>
+            <input class="input" id="typeLabel_${type}" placeholder="${def.placeholder}" value="${unitVal||''}" style="margin-bottom:0;"></div>
+            <div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;">TARGET</div>
+            <input class="input" id="typeTarget_${type}" type="number" placeholder="optional" value="${targetVal||''}" style="margin-bottom:0;"></div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function openEditHabit(id){
   const h=habits.find(h=>h.id===id);if(!h)return;
   document.getElementById('editHabitId').value=id;
   document.getElementById('editHabitName').value=h.name;
   editHabitColor=h.color||'#00d2ff';
-  // Category picker
+  editHabitCat=h.category||'General';
+  editSelectedTypes=new Set(h.type?h.type.split(','):['checkbox']);
+  document.querySelectorAll('#editTypeGrid .type-opt').forEach(o=>{
+    o.classList.toggle('selected',editSelectedTypes.has(o.dataset.type));
+  });
+  renderEditTypeConfig(getHabitMeta(h));
   const cp=document.getElementById('editCatPicker');
   cp.innerHTML=PRESETS.map(p=>`<div class="cat-opt${(h.category||'General')===p.name?' selected':''}"
     style="${(h.category||'General')===p.name?`background:${p.color};border-color:${p.color};color:#000;`:''}"
     onclick="selectEditCat('${p.name}','${p.color}',this)">${p.name}</div>`).join('')
     +`<div class="cat-opt" onclick="selectEditCat('custom','',this)">+ Custom</div>`;
-  // Color picker
   document.getElementById('editColorPicker').innerHTML=PALETTE.map(col=>
     `<div class="color-swatch${col===editHabitColor?' selected':''}" style="background:${col};"
       onclick="editHabitColor='${col}';document.querySelectorAll('#editColorPicker .color-swatch').forEach(s=>s.classList.remove('selected'));this.classList.add('selected')"></div>`
@@ -3209,7 +3370,6 @@ function openEditHabit(id){
   openModal('editHabitModal');
 }
 
-let editHabitCat='General';
 function selectEditCat(name,color,el){
   editHabitCat=name==='custom'?'':name;
   if(color)editHabitColor=color;
@@ -3223,10 +3383,21 @@ async function saveEditHabit(){
   const id=parseInt(document.getElementById('editHabitId').value);
   const name=document.getElementById('editHabitName').value.trim();if(!name)return;
   const category=editHabitCat||document.getElementById('editCustomCat').value.trim()||'General';
+  const typeStr=[...editSelectedTypes].join(',');
+  // Build meta from edit form fields
+  const nonCb=[...editSelectedTypes].filter(t=>t!=='checkbox');
+  const meta={};
+  nonCb.forEach(type=>{
+    const lEl=document.getElementById(`typeLabel_${type}`);
+    const tEl=document.getElementById(`typeTarget_${type}`);
+    meta[type]={label:lEl?.value.trim()||TYPE_DEFAULTS[type]?.unit||type,target:tEl?.value?parseFloat(tEl.value):null};
+  });
+  const unit=nonCb.length?JSON.stringify(meta):'';
+  const target=nonCb.length&&meta[nonCb[0]]?.target?meta[nonCb[0]].target:null;
   setSyncStatus('syncing');
-  await sb.from('habits').update({name,category,color:editHabitColor}).eq('id',id);
+  await sb.from('habits').update({name,category,color:editHabitColor,type:typeStr,unit,target}).eq('id',id);
   const h=habits.find(h=>h.id===id);
-  if(h){h.name=name;h.category=category;h.color=editHabitColor;}
+  if(h){h.name=name;h.category=category;h.color=editHabitColor;h.type=typeStr;h.unit=unit;h.target=target;}
   setSyncStatus('ok');closeModal('editHabitModal');render();
 }
 
