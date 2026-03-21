@@ -1113,8 +1113,21 @@ function habitPrimaryType(h){
 // unit field stores JSON for multi-type: {"duration":{label,target},"rating":{label}}
 // Falls back to old plain string for backward compat
 function getHabitMeta(h){
-  try{return JSON.parse(h.unit||'{}');}
-  catch{return h.unit?{_legacy:h.unit}:{};}
+  if(!h.unit)return{};
+  try{
+    const parsed=JSON.parse(h.unit);
+    // Valid JSON meta object
+    if(typeof parsed==='object'&&parsed!==null&&!Array.isArray(parsed))return parsed;
+    return{};
+  }catch{
+    // Plain string unit — build meta from type+unit for backward compat
+    const types=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
+    const meta={};
+    types.forEach(t=>{
+      meta[t]={label:h.unit||TYPE_DEFAULTS[t]?.unit||t, target:h.target||null};
+    });
+    return meta;
+  }
 }
 function getTypeLabel(h,type){
   const meta=getHabitMeta(h);
@@ -1136,16 +1149,32 @@ function getHabitValueForType(h,date,type){
   if(!raw)return null;
   try{
     const parsed=JSON.parse(raw);
+    // If parsed is a plain number/string (old single-type format)
+    if(typeof parsed!=='object'||parsed===null){
+      // Return raw value for any type on old-format habits
+      return raw;
+    }
+    // New multi-type JSON format
     return parsed[type]!==undefined?String(parsed[type]):null;
   }catch{
-    // old format - return raw for the primary type
-    return raw;
+    // Not JSON — plain string (old format), return for primary type
+    const types=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
+    return(types.length===0||types[0]===type||types.indexOf(type)===0)?raw:null;
   }
 }
 function isMultiMetric(h){
   const types=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
   return types.length>1;
 }
+
+const TYPE_DEFAULTS={
+  quantity:{label:'Value',unit:'',target:'',placeholder:'pages, reps, glasses...'},
+  duration:{label:'Duration',unit:'min',target:'',placeholder:'minutes'},
+  distance:{label:'Distance',unit:'km',target:'',placeholder:'km, miles, steps...'},
+  rating:{label:'Rating',unit:'',target:'10',placeholder:'1–10'},
+  time:{label:'Time',unit:'',target:'',placeholder:'e.g. Wake up time'},
+};
+
 
 // ── NOTES STATE ──────────────────────────────────────────────
 let notes=[]; // all notes loaded from DB
@@ -1241,13 +1270,6 @@ function toggleType(type,el){
   renderTypeConfigFields('typeConfigFields');
 }
 
-const TYPE_DEFAULTS={
-  quantity:{label:'Value',unit:'',target:'',placeholder:'pages, reps, glasses...'},
-  duration:{label:'Duration',unit:'min',target:'',placeholder:'minutes'},
-  distance:{label:'Distance',unit:'km',target:'',placeholder:'km, miles, steps...'},
-  rating:{label:'Rating',unit:'',target:'10',placeholder:'1–10'},
-  time:{label:'Time',unit:'',target:'',placeholder:'e.g. Wake up time'},
-};
 
 function renderTypeConfigFields(containerId,existingMeta){
   const el=document.getElementById(containerId);
@@ -1410,29 +1432,31 @@ function renderThread(type,refId,accentColor){
 async function logHabitValueForType(id,type,value){
   const td=today();setSyncStatus('syncing');
   const strVal=String(value);
-  // Get existing value and merge
+  const h=habits.find(h=>h.id===id);
+  const nonCbTypes=h?h.type.split(',').filter(t=>t!=='checkbox'):[];
+  const isMulti=nonCbTypes.length>1;
   const existing=habitLog[td]?.[id];
   let newVal=strVal;
+
   if(existing){
-    try{
-      const parsed=JSON.parse(existing.value||'{}');
-      parsed[type]=strVal;
-      newVal=JSON.stringify(parsed);
-    }catch{
-      // Was plain string (single type) — convert to JSON
-      const h=habits.find(h=>h.id===id);
-      const primaryType=h?h.type.split(',').find(t=>t!=='checkbox')||'checkbox':'value';
-      newVal=JSON.stringify({[primaryType]:existing.value,[type]:strVal});
+    if(isMulti){
+      // Multi-type: merge into JSON object
+      let obj={};
+      try{
+        const parsed=JSON.parse(existing.value||'{}');
+        if(typeof parsed==='object'&&parsed!==null)obj=parsed;
+        else obj={[nonCbTypes[0]]:existing.value}; // upgrade plain to JSON
+      }catch{obj={[nonCbTypes[0]]:existing.value};}
+      obj[type]=strVal;
+      newVal=JSON.stringify(obj);
+    }else{
+      // Single type: keep as plain string
+      newVal=strVal;
     }
     await sb.from('habit_log').update({value:newVal}).eq('id',existing.id);
     habitLog[td][id].value=newVal;
-    // Auto-mark checkbox done when any metric is logged
-    if(!habitLog[td][id].done&&habitIsCheckbox(habits.find(h=>h.id===id))){
-      // already tracked via isHabitDone
-    }
   }else{
-    const obj={[type]:strVal};
-    newVal=JSON.stringify(obj);
+    newVal=isMulti?JSON.stringify({[type]:strVal}):strVal;
     const{data}=await sb.from('habit_log').insert({habit_id:id,date:td,value:newVal,note:''}).select().single();
     if(!habitLog[td])habitLog[td]={};
     if(data)habitLog[td][id]={id:data.id,value:newVal,note:''};
