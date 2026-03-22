@@ -2185,7 +2185,6 @@ function setPeriod(p,el){
 }
 function shiftScoreChart(dir){}  // arrows removed
 function shiftChart(name,dir){}  // arrows removed
-function resetZoom(id){if(charts[id]&&charts[id].resetZoom)charts[id].resetZoom();}
 
 // Standard deviation helper
 function stdDev(arr){
@@ -3103,6 +3102,7 @@ function renderSparklineChart(){
   const days=getDaysInRange(start,end);
   const labels=days.map(d=>fmtShort(d));
   const color=h.color||getCatColor(h.category||'General');
+  const types=h.type?h.type.split(','):['checkbox'];
   const datasets=[];
   const scales={x:{ticks:{color:TC,font:CF,maxRotation:45},grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}}};
 
