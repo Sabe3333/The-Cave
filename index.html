@@ -2907,11 +2907,13 @@ function renderCompareChart(){
       ticks:{color,font:CF,maxTicksLimit:5,
         callback:habitIsTime(h)
           ?v=>{if(v%1!==0&&v%5!==0)return'';const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}
-          :v=>{const r=Math.round(v*10)/10;const clean=Number.isInteger(r)?r:Number.isInteger(r*10)?r:null;return clean!==null?clean+(h.unit?' '+h.unit:''):'';}
+          :v=>{const r=Math.round(v*10)/10;const clean=Number.isInteger(r)?r:Number.isInteger(r*10)?r:null;const axisLbl=(getHabitMeta(h)[compareType]||{}).label||'';return clean!==null?clean+(axisLbl?' '+axisLbl:''):'';}
       }
     };
+    const hMetaForLabel=getHabitMeta(h);
+    const cleanLabel=(hMetaForLabel[compareType]||{}).label||TYPE_DEFAULTS[compareType]?.unit||compareType;
     return{
-      label:h.name+(h.unit?' ('+h.unit+')':''),
+      label:h.name+' ('+cleanLabel+')',
       data,borderColor:color,
       backgroundColor:`rgba(${hexToRgb(color)},0.06)`,
       pointBackgroundColor:color,pointRadius:3,pointHoverRadius:6,
@@ -3067,12 +3069,17 @@ function renderSparklineMetrics(){
   const h=habits.find(h=>h.id===sparklineHabitId);
   if(!h)return;
   const types=h.type?h.type.split(','):['checkbox'];
+  const sMeta=getHabitMeta(h);
   const metricDefs=[];
   if(types.includes('checkbox'))metricDefs.push({key:'done',label:'Done %',color:'#00ff9d'});
-  if(types.some(t=>['quantity','duration','distance'].includes(t)))metricDefs.push({key:'value',label:h.unit||'Value',color:h.color||'#00d2ff'});
-  if(types.includes('rating'))metricDefs.push({key:'rating',label:'Rating',color:'#ffb800'});
-  if(types.includes('time'))metricDefs.push({key:'time',label:'Wake Time',color:'#ff7eb3'});
-  if(!sparklineMetrics.size&&metricDefs.length)sparklineMetrics.add(metricDefs[0].key);
+  // Each non-checkbox type gets its own button using actual type name as key
+  types.filter(t=>t!=='checkbox').forEach(t=>{
+    const tMeta=sMeta[t]||{};
+    const lbl=tMeta.label||TYPE_DEFAULTS[t]?.unit||t;
+    const col=t==='time'?'#ff7eb3':t==='rating'?'#ffb800':h.color||'#00d2ff';
+    metricDefs.push({key:t,label:lbl,color:col});
+  });
+  if(!sparklineMetrics.size&&metricDefs.length)sparklineMetrics.add(metricDefs[metricDefs[0].key==='done'&&metricDefs.length>1?1:0].key);
   el.innerHTML=metricDefs.map(m=>`<button class="metric-toggle${sparklineMetrics.has(m.key)?' active':''}"
     style="${sparklineMetrics.has(m.key)?`border-color:${m.color};color:${m.color};background:${m.color}18;`:''}"
     onclick="toggleSparklineMetric('${m.key}')">${m.label}</button>`).join('');
@@ -3108,27 +3115,50 @@ function renderSparklineChart(){
     scales['yDone']={position:'left',min:0,max:100,ticks:{color:TC,font:CF,callback:v=>v+'%'},
       grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}};
   }
-  if(sparklineMetrics.has('value')){
-    const data=days.map(d=>{const v=getHabitValue(h.id,d);return v?Math.round(parseFloat(v)*10)/10:0;});
-    datasets.push({label:h.unit||'Value',data,borderColor:color,backgroundColor:'transparent',
-      pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yVal'});
-    const nonZero=data.filter(v=>v>0);
-    const mx=nonZero.length?Math.max(...nonZero)*1.15:10;
-    scales['yVal']={position:datasets.length>1?'right':'left',min:0,max:mx,
-      ticks:{color:TC,font:CF,callback:v=>Math.round(v*10)/10+(h.unit?' '+h.unit:'')},
-      grid:{color:GC},border:{color:'rgba(0,210,255,0.08)'}};
-  }
-  if(sparklineMetrics.has('time')){
-    const data=days.map(d=>{const v=getHabitValue(h.id,d);if(!v)return null;const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});
-    datasets.push({label:'Wake Time',data,borderColor:'#ff7eb3',backgroundColor:'transparent',
-      pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:'yTime'});
-    const nonNull=data.filter(v=>v!==null);
-    const mn=nonNull.length?Math.max(0,Math.min(...nonNull)-60):0;
-    const mx=nonNull.length?Math.min(1439,Math.max(...nonNull)+60):1439;
-    scales['yTime']={position:'right',min:mn,max:mx,
-      ticks:{color:TC,font:CF,callback:v=>{const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}},
-      grid:{color:'transparent'},border:{color:'rgba(0,210,255,0.08)'}};
-  }
+  // Handle each non-checkbox type that's selected
+  const spMeta=getHabitMeta(h);
+  const nonCbSpTypes=types.filter(t=>t!=='checkbox');
+  nonCbSpTypes.forEach((type,tidx)=>{
+    if(!sparklineMetrics.has(type))return;
+    const tMeta=spMeta[type]||{};
+    const tLabel=tMeta.label||TYPE_DEFAULTS[type]?.unit||type;
+    const tTarget=tMeta.target||null;
+    const tColor=type==='time'?'#ff7eb3':type==='rating'?'#ffb800':color;
+    const axisId='y_'+type;
+    const pos=(datasets.filter(d=>d.yAxisID!=='yDone').length%2===0)?'left':'right';
+
+    if(type==='time'){
+      const data=days.map(d=>{
+        const v=getHabitValueForType(h,d,type);
+        if(!v)return null;
+        const parts=v.split(':').map(Number);
+        return isNaN(parts[0])?null:parts[0]*60+(parts[1]||0);
+      });
+      const nonNull=data.filter(v=>v!==null);
+      const mn=nonNull.length?Math.max(0,Math.min(...nonNull)-60):0;
+      const mx=nonNull.length?Math.min(1439,Math.max(...nonNull)+60):720;
+      datasets.push({label:tLabel,data,borderColor:tColor,backgroundColor:'transparent',
+        pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:axisId});
+      scales[axisId]={position:pos,min:mn,max:mx,
+        ticks:{color:TC,font:CF,callback:v=>{if(v%30!==0&&v%60!==0)return'';const hh=Math.floor(v/60);const mm=v%60;return`${hh}:${String(mm).padStart(2,'0')}`;}},
+        grid:{color:tidx===0?GC:'transparent'},border:{color:'rgba(0,210,255,0.08)'}};
+    }else{
+      const data=days.map(d=>{
+        const v=getHabitValueForType(h,d,type);
+        if(!v||v==='0')return null;
+        const num=parseFloat(v);
+        return isNaN(num)?null:Math.round(num*10)/10;
+      });
+      const nonNull=data.filter(v=>v!==null);
+      const mx=nonNull.length?Math.max(...nonNull)*1.15:(type==='rating'?10:10);
+      const target=tTarget||null;
+      datasets.push({label:tLabel,data,borderColor:tColor,backgroundColor:'transparent',
+        pointRadius:3,tension:0.3,fill:false,spanGaps:true,yAxisID:axisId});
+      scales[axisId]={position:pos,min:0,max:Math.ceil(mx),
+        ticks:{color:TC,font:CF,maxTicksLimit:6,callback:v=>{const r=Math.round(v*10)/10;return Number.isInteger(r)?r+(tLabel?' '+tLabel:''):'';}},
+        grid:{color:tidx===0?GC:'transparent'},border:{color:'rgba(0,210,255,0.08)'}};
+    }
+  });
   if(!datasets.length)return;
   charts['chartSparkline']=new Chart(canvas.getContext('2d'),{type:'line',
     data:{labels,datasets},
