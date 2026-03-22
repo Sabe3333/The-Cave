@@ -724,10 +724,7 @@ select.input{cursor:pointer;}
     <div class="score-banner" id="scoreBanner"></div>
     <div class="momentum-card" id="momentumCard"></div>
   </div>
-  <div class="charts-grid" style="margin-bottom:10px;">
-    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Personal Records</span></div><div id="personalRecords" style="margin-top:4px;"></div></div>
-    <div class="chart-card"><div class="chart-title"><span class="chart-title-text">Goal Predictions</span></div><div id="goalPredictions" style="margin-top:4px;"></div></div>
-  </div>
+
   <div class="cat-scores-row" id="catScoresRow"></div>
   <div class="period-switcher">
     <button class="btn-ghost active-filter" onclick="setPeriod('week',this)">This Week</button>
@@ -764,24 +761,9 @@ select.input{cursor:pointer;}
     </div>
   </div>
 
-  <!-- GOAL PROGRESS OVER TIME — new -->
-  <div class="charts-grid" style="margin-bottom:10px;">
-    <div class="chart-card full">
-      <div class="chart-title"><span class="chart-title-text">Goal Progress Over Time</span><button class="reset-zoom-btn" onclick="resetZoom('chartGoalTime')">Reset</button></div>
-      <div class="goal-selector" id="goalTimeBtns"></div>
-      <div class="chart-wrap-lg"><canvas id="chartGoalTime"></canvas></div>
-      <div class="chart-hint">scroll zoom · drag pan</div>
-    </div>
-  </div>
-
   <!-- CONSISTENCY + DAY OF WEEK -->
   <div class="charts-grid" style="margin-bottom:10px;">
-    <div class="chart-card">
-      <div class="chart-title"><span class="chart-title-text">Consistency Index</span></div>
-      <div class="insight-sub">High avg + low spread = real discipline.</div>
-      <div class="chart-wrap-md"><canvas id="chartConsistency"></canvas></div>
-      <div class="chart-hint">scroll to zoom · drag to pan</div>
-    </div>
+
     <div class="chart-card">
       <div class="chart-title"><span class="chart-title-text">Best Day of Week</span></div>
       <div class="insight-sub">Which days you execute vs drop off.</div>
@@ -1798,7 +1780,10 @@ function renderDashboard(){
       const d=isHabitDone(h.id,td);
       const val=getHabitValue(h.id,td);
       const color=h.color||getCatColor(h.category||'General');
-      const dispVal=h.type==='quantity'&&val?`${val}${h.unit?' '+h.unit:''}`:h.type==='time'&&val?val:'';
+      const _meta=getHabitMeta(h);
+      const _nonCb=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
+      const _parts=_nonCb.map(t=>{const v=getHabitValueForType(h,td,t);if(!v||v==='0')return null;const lbl=(_meta[t]||{}).label||TYPE_DEFAULTS[t]?.unit||'';return t==='time'?v:v+(lbl?' '+lbl:'');}).filter(Boolean);
+      const dispVal=_parts.join(' · ');
       return`<div class="quick-habit" onclick="toggleHabitDash(${h.id})">
         <div class="quick-check${d?' done':''}" style="${d?`background:${color};border-color:${color};box-shadow:0 0 5px ${color};`:`border-color:${color}60;`}"></div>
         <span class="quick-name" style="${d?'color:var(--text2);text-decoration:line-through':''}">${h.name}</span>
@@ -1828,25 +1813,21 @@ function renderYesterday(){
   const allDates=Object.keys(habitLog).sort();
   el.innerHTML=habits.map(h=>{
     const color=h.color||getCatColor(h.category||'General');
-    const val=getHabitValue(h.id,yd);
     const done=isHabitDone(h.id,yd);
     const score=scoreHabitDay(h,yd);
-    // Compute personal average for this habit
-    const loggedVals=allDates.map(d=>getHabitValue(h.id,d)).filter(v=>v!==null&&v!=='0');
-    let avgStr='';
-    if(loggedVals.length>1&&habitIsNumeric(h)){
-      const nums=loggedVals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
-      if(nums.length){
-        const avg=nums.reduce((a,b)=>a+b,0)/nums.length;
-        const cur=val?parseFloat(val):0;
-        const delta=cur-avg;
-        const sign=delta>=0?'+':'';
-        avgStr=`<span class="yest-avg">avg ${Math.round(avg*10)/10}</span>
-          <span class="yest-delta" style="color:${delta>=0?'var(--accent2)':'var(--red)'}">${sign}${Math.round(delta*10)/10}</span>`;
-      }
-    }
-    const dispVal=habitIsNumeric(h)&&val?`${val}${h.unit?' '+h.unit:''}`:habitIsTime(h)&&val?val:done?'✓':'—';
+    const meta=getHabitMeta(h);
+    const nonCbTypes=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
+    // Build display value from all types
+    const valParts=nonCbTypes.map(type=>{
+      const v=getHabitValueForType(h,yd,type);
+      if(!v||v==='0')return null;
+      const tMeta=meta[type]||{};
+      const lbl=tMeta.label||TYPE_DEFAULTS[type]?.unit||'';
+      return type==='time'?v:v+(lbl?' '+lbl:'');
+    }).filter(Boolean);
+    const dispVal=valParts.length?valParts.join(' · '):done?'✓':'—';
     const scoreColor=score>=80?'var(--accent2)':score>=50?'var(--warn)':'var(--red)';
+    let avgStr='';
     return`<div class="yesterday-row">
       <div class="yest-name" style="color:${color}">${h.name}</div>
       <span class="yest-val" style="color:${scoreColor}">${dispVal}</span>
@@ -1905,51 +1886,84 @@ function renderWeekHeatmap(){
 
 // ── SCORE (new model — all habit types count) ─────────────────
 function scoreHabitDay(h,date){
-  // Returns 0-100 for this habit on this date
-  const val=getHabitValue(h.id,date);
   const types=h.type?h.type.split(','):['checkbox'];
+  const meta=getHabitMeta(h);
+  const numericTypes=['quantity','duration','distance'];
+  const hasCheckbox=types.includes('checkbox');
+  const nonCbTypes=types.filter(t=>t!=='checkbox');
 
-  if(types.includes('checkbox')){
-    if(!isHabitDone(h.id,date))return 0;
-    // If also has numeric/duration/rating, checkbox = 30% of score, metric = 70%
-    if(types.some(t=>['quantity','duration','distance','rating'].includes(t))){
-      const numScore=scoreNumeric(h,val);
-      return Math.round(30+numScore*0.7);
+  // Not logged at all
+  if(!isHabitDone(h.id,date)&&nonCbTypes.every(t=>{
+    const v=getHabitValueForType(h,date,t);return!v||v==='0';
+  }))return 0;
+
+  if(!nonCbTypes.length){
+    // Pure checkbox
+    return isHabitDone(h.id,date)?100:0;
+  }
+
+  // Score each metric type separately, average them
+  const typeScores=nonCbTypes.map(type=>{
+    const v=getHabitValueForType(h,date,type);
+    if(!v||v==='0')return null;
+    const typeMeta=meta[type]||{};
+    const target=typeMeta.target||h.target||null;
+    if(type==='time'){
+      return scoreWakeTime(v,typeMeta.target);
+    }else if(type==='rating'){
+      const max=typeMeta.target||10;
+      const num=parseFloat(v);
+      return isNaN(num)?null:Math.min(100,Math.round(num/max*100));
+    }else{
+      // quantity, duration, distance
+      const num=parseFloat(v);
+      if(isNaN(num)||num<0)return null;
+      if(!target)return num>0?70:0;
+      return Math.min(100,Math.round(num/parseFloat(target)*100));
     }
-    if(types.includes('time')){
-      const timeScore=scoreWakeTime(h,val);
-      return Math.round(30+timeScore*0.7);
-    }
-    return 100; // pure checkbox, done = 100
+  }).filter(s=>s!==null);
+
+  const metricScore=typeScores.length
+    ?Math.round(typeScores.reduce((a,b)=>a+b,0)/typeScores.length)
+    :0;
+
+  if(hasCheckbox){
+    const cbDone=isHabitDone(h.id,date);
+    if(!cbDone&&metricScore===0)return 0;
+    // checkbox done = 30%, metrics = 70%
+    return Math.round((cbDone?30:0)+metricScore*0.7);
   }
-  if(types.some(t=>['quantity','duration','distance','rating'].includes(t))){
-    if(!val)return 0;
-    return scoreNumeric(h,val);
-  }
-  if(types.includes('time')){
-    if(!val)return 0;
-    return scoreWakeTime(h,val);
-  }
-  return isHabitDone(h.id,date)?100:0;
+  return metricScore;
 }
 
 function scoreNumeric(h,val){
+  // Legacy — kept for any direct calls
   if(!val)return 0;
   const v=parseFloat(val);
-  if(!h.target)return v>0?70:0; // no target, logged=70
-  const pct=v/parseFloat(h.target);
-  return Math.min(100,Math.round(pct*100));
+  if(isNaN(v))return 0;
+  if(!h.target)return v>0?70:0;
+  return Math.min(100,Math.round(v/parseFloat(h.target)*100));
 }
 
-function scoreWakeTime(h,val){
-  if(!val||!h.target)return val?50:0;
-  // target is stored as time string e.g. "06:00"
-  const [th,tm]=h.target.toString().split(':').map(Number);
-  const [vh,vm]=val.split(':').map(Number);
-  const targetMins=th*60+(tm||0);
-  const actualMins=vh*60+vm;
-  const diffMins=actualMins-targetMins; // positive = woke up later
-  if(diffMins<=0)return 100; // on time or early
+function scoreWakeTime(val,targetVal){
+  if(!val)return 50;
+  // val is time string "HH:MM", targetVal is number (minutes) or time string
+  let targetMins=null;
+  if(targetVal){
+    if(typeof targetVal==='string'&&targetVal.includes(':')){
+      const[th,tm]=targetVal.split(':').map(Number);
+      targetMins=th*60+(tm||0);
+    }else{
+      targetMins=parseFloat(targetVal);
+      if(isNaN(targetMins))targetMins=null;
+    }
+  }
+  const parts=val.split(':').map(Number);
+  if(parts.length<2||isNaN(parts[0]))return 50;
+  const actualMins=parts[0]*60+(parts[1]||0);
+  if(targetMins===null)return 50;
+  const diffMins=actualMins-targetMins;
+  if(diffMins<=0)return 100;
   if(diffMins<=30)return 90;
   if(diffMins<=60)return 70;
   if(diffMins<=90)return 50;
@@ -2343,15 +2357,10 @@ function renderStats(){
       </div>`;
     }).join('');
 
-  renderPersonalRecords();
-  renderGoalPredictions();
   renderSparklineSelector();
   renderSparklineChart();
   renderCorrPanel();
-  renderGoalTimeSelector();
-  renderGoalTimeChart();
   renderScoreChart();
-  renderConsistencyChart(start,end);
   renderDayOfWeekChart(start,end);
   renderHabitChart();
   renderMotChart();
@@ -2818,11 +2827,16 @@ function renderCompareChips(){
     const sel=compareSelected.includes(h.id);
     const color=h.color||getCatColor(h.category||'General');
     const disabled=!sel&&compareSelected.length>=5;
+    // Build clean label from meta
+    const hMeta=getHabitMeta(h);
+    const nonCb=h.type?h.type.split(',').filter(t=>t!=='checkbox'):[];
+    const labels=nonCb.map(t=>(hMeta[t]||{}).label||TYPE_DEFAULTS[t]?.unit||t).filter(Boolean);
+    const chipLabel=labels.length?'('+labels.join(', ')+')':'';
     return`<div class="habit-select-chip${sel?' selected':''}${disabled?' disabled':''}"
       style="${sel?`background:${color};border-color:${color};`:`border-color:${color}40;opacity:${disabled?0.35:1};`}"
       onclick="${disabled?'':'toggleCompare('+h.id+')'}">
       <div class="chip-dot" style="background:${color};box-shadow:0 0 4px ${color};"></div>
-      ${h.name}${h.unit?' ('+h.unit+')':''}
+      ${h.name} ${chipLabel}
     </div>`;
   }).join('');
 }
@@ -2866,15 +2880,18 @@ function renderCompareChart(){
     const color=h.color||getCatColor(h.category||'General');
     const axisId=`y${idx}`;
     // Build data as {x,y} points with numeric x index
+    // For multi-type habits, use first non-checkbox type for compare
+    const compareType=h.type?h.type.split(',').find(t=>t!=='checkbox')||'checkbox':'checkbox';
     const data=buckets.map((b,i)=>{
-      const vals=b.days.map(d=>getHabitValue(id,d)).filter(v=>v!==null);
+      const vals=b.days.map(d=>getHabitValueForType(h,d,compareType)).filter(v=>v!==null&&v!=='0');
       if(!vals.length)return{x:i,y:null};
-      if(habitIsTime(h)){
-        const mins=vals.map(v=>{const[hh,mm]=v.split(':').map(Number);return hh*60+mm;});
-        return{x:i,y:Math.round(mins.reduce((a,b)=>a+b,0)/mins.length)};
+      if(compareType==='time'){
+        const mins=vals.map(v=>{const parts=v.split(':').map(Number);return parts[0]*60+(parts[1]||0);}).filter(m=>!isNaN(m));
+        return{x:i,y:mins.length?Math.round(mins.reduce((a,b)=>a+b,0)/mins.length):null};
       }
-      const avg=vals.reduce((a,b)=>a+parseFloat(b),0)/vals.length;
-      return{x:i,y:Math.round(avg*10)/10};
+      const nums=vals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+      if(!nums.length)return{x:i,y:null};
+      return{x:i,y:Math.round(nums.reduce((a,b)=>a+b,0)/nums.length*10)/10};
     });
     const nonNull=data.map(d=>d.y).filter(v=>v!==null&&v>0);
     const dataMax=nonNull.length?Math.max(...nonNull):10;
